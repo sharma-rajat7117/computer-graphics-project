@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CGObject.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -127,6 +128,10 @@
     <None Include="shaders\lighting.vs" />
     <None Include="shaders\shader.fs" />
     <None Include="shaders\shader.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Dependencies\OBJ_Loader.h" />
+    <ClInclude Include="CGObject.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

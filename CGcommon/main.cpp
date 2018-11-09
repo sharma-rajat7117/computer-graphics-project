@@ -25,6 +25,10 @@ using namespace glm;
 #include <fstream>
 #include <algorithm>
 #include <sstream>
+
+#include "CGobject.h"
+#include "..\Dependencies\OBJ_Loader.h"
+
 using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -37,6 +41,10 @@ void processInput(GLFWwindow *window);
 
 #include <GL/glew.h>
 
+// Macro for indexing vertex buffer
+#define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+
 GLfloat rotate_angle = 0.0f;
 
 // settings
@@ -44,8 +52,13 @@ const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1100;
 
 // Shaders
-GLuint programID; 
+GLuint programID;
 GLuint lightingID;
+
+// Shader attribute locations
+GLuint loc1;
+GLuint loc2;
+GLuint loc3;
 
 // Uniform locations
 int model_mat_location;
@@ -53,13 +66,18 @@ int view_mat_location;
 int proj_mat_location;
 
 // Buffers
-GLuint VBO, containerVAO;
+GLuint VBO;
+GLuint IBO;
+GLuint containerVAO;
 GLuint lightVAO;
 
 // camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+// objects
+CGCommon::CGObject football;
 
 bool firstMouse = true;
 float myyaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
@@ -73,9 +91,68 @@ float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
 //lighting position
-glm::vec3 lightPos(1.0f,1.0f,3.0f);
+glm::vec3 lightPos(1.0f, 1.0f, 3.0f);
 
 bool rotateCubes = false;
+
+enum class MeshType
+{
+	football,
+};
+
+void linkCurrentBuffertoShader(MeshType meshType)
+{
+	if (meshType == MeshType::football)
+	{
+		glBindVertexArray(containerVAO);
+
+		glEnableVertexAttribArray(loc1);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_TRUE, 8 * sizeof(float), (void*)(football.startVBO * 8 * sizeof(float)));
+
+		glEnableVertexAttribArray(loc2);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_TRUE, 8 * sizeof(float), (void*)(football.startVBO * 8 * sizeof(float) + BUFFER_OFFSET(3 * sizeof(GLfloat))));
+
+		glEnableVertexAttribArray(loc3);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_TRUE, 8 * sizeof(float), (void*)(football.startVBO * 8 * sizeof(float) + BUFFER_OFFSET(6 * sizeof(GLfloat))));
+
+		//IBO
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+	}
+}
+
+void addToObjectBuffer(MeshType meshType, int startVBO, int n_vertices, float *vertices)
+{
+	glBufferSubData(GL_ARRAY_BUFFER, startVBO * 8 * sizeof(GLfloat), n_vertices * 8 * sizeof(GLfloat), vertices);
+
+	// Vertex Attribute array	
+	switch (meshType)
+	{
+	case MeshType::football:
+		glGenVertexArrays(1, &containerVAO);
+		break;
+	}
+
+	linkCurrentBuffertoShader(meshType);
+}
+
+void updateUniformVariables(glm::mat4 model)
+{
+	glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &model[0][0]);
+
+	//mat4 normalsTransform = transpose(inverse(model));
+	//glUniformMatrix4fv(normals_location, 1, GL_FALSE, normalsTransform.m);
+	//glUniformMatrix4fv(worldNormal, 1, GL_FALSE, normalsTransform.m);
+}
+
+void updateUniformVariables(glm::mat4 model, glm::mat4 view, glm::mat4 persp_proj)
+{
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, &persp_proj[0][0]);
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, &view[0][0]);
+	updateUniformVariables(model);
+}
 
 GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_path) {
 
@@ -183,81 +260,141 @@ void setupUniformVariables()
 	proj_mat_location = glGetUniformLocation(programID, "projection");
 }
 
+//objl::Mesh cubeMesh()
+//{	
+//	GLfloat vertices[] =
+//	{
+//		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+//		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+//		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+//		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+//		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+//		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+//
+//		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+//		0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+//		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+//		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+//		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+//		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+//
+//		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+//		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+//		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+//		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+//		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+//		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+//
+//		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+//		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+//		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+//		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+//		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+//		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+//
+//		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+//		0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+//		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+//		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+//		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+//		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+//
+//		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+//		0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+//		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+//		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+//		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+//		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+//	};
+//
+//	std::vector<objl::Vertex> vertices = std::vector<objl::Vertex>{ point1, point2, point3, point4 };
+//
+//	std::vector<unsigned int> indices = std::vector<unsigned int>{ 0, 1, 2,
+//		0, 2, 3 };
+//
+//	return objl::Mesh(vertices, indices);
+//}
+
+objl::Mesh LoadMesh(const char* objFileLocation)
+{
+	objl::Loader obj_loader;
+
+	bool result = obj_loader.LoadFile(objFileLocation);
+	if (result && obj_loader.LoadedMeshes.size() > 0)
+	{
+		return obj_loader.LoadedMeshes[0];
+	}
+	else
+		throw new exception("Could not load mesh");
+}
+
 void createObjects()
 {
-	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
-	GLfloat vertices[] =
-	{
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	int n_vbovertices = 0;
+	int n_ibovertices = 0;
 
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+	//CGCommon::CGObject cube = CGCommon::CGObject();
+	//cube.Mesh = cubeMesh();
+	//cube.startVBO = n_vbovertices;
+	//cube.startIBO = n_ibovertices;
+	//n_vbovertices += cube.Mesh.Vertices.size();
+	//n_ibovertices += cube.Mesh.Indices.size();
 
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+	// load meshes with OBJ Loader	
+	const char* footballFileName = "../CGCommon/Meshes/Football/football.obj";
 
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+	// football
+	football = CGCommon::CGObject();
+	football.Mesh = LoadMesh(footballFileName);
+	football.initialTranslateVector = vec3(-10.0f, 4.0f, -10.0f);
+	football.color = vec3(0.0f, 0.0f, 1.0f);   // Quick solution for color as we are not using texture
+	football.startVBO = n_vbovertices;
+	football.startIBO = n_ibovertices;
 
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+	n_vbovertices += football.Mesh.Vertices.size();
+	n_ibovertices += football.Mesh.Indices.size();
 
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-	};
+	// Shader Attribute locations
+	loc1 = glGetAttribLocation(programID, "position");
+	loc2 = glGetAttribLocation(programID, "normal");
+	loc3 = glGetAttribLocation(programID, "texture");
 
-	// First, set the container's VAO (and VBO)	
-	glGenVertexArrays(1, &containerVAO);
+	// Create VBO
 	glGenBuffers(1, &VBO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glBindVertexArray(containerVAO);
-	// Position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0);
-	glEnableVertexAttribArray(0);
+	glGenVertexArrays(1, &containerVAO);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
+	
+	// Start addition objects to containerVAO
+	addToObjectBuffer(MeshType::football, football.startVBO, football.Mesh.Vertices.size(), &football.Mesh.Vertices[0].Position.X);
+	
+	// Create IBO
+	glGenBuffers(1, &IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ibovertices * sizeof(unsigned int), NULL, GL_STATIC_DRAW);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, football.startIBO * sizeof(unsigned int), sizeof(unsigned int) * football.Mesh.Indices.size(), &football.Mesh.Indices[0]);
 
-	// Normal attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)(3 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
-	glBindVertexArray(0);
+	//glBindVertexArray(containerVAO);
+	//// Position attribute
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0);
+	//glEnableVertexAttribArray(0);
 
-	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
-	// We only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need.
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// Set the vertex attributes (only position data for the lamp))
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0); // Note that we skip over the normal vectors
-	glEnableVertexAttribArray(0);
-	glBindVertexArray(0);
+	//// Normal attribute
+	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)(3 * sizeof(GLfloat)));
+	//glEnableVertexAttribArray(1);
+	//glBindVertexArray(0);
+
+	//// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
+	//glGenVertexArrays(1, &lightVAO);
+	//glBindVertexArray(lightVAO);
+	//// We only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need.
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//// Set the vertex attributes (only position data for the lamp))
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0); // Note that we skip over the normal vectors
+	//glEnableVertexAttribArray(0);
+	//glBindVertexArray(0);
 }
 
 void init()
@@ -288,7 +425,7 @@ void display()
 	glLoadIdentity();
 	// activate shader
 	glUseProgram(programID);
-
+	
 	// pass projection matrix to shader (note that in this case it could change every frame)
 	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, &projection[0][0]);
@@ -300,10 +437,7 @@ void display()
 	local1 = glm::translate(local1, cameraPos);
 	glm::mat4 global1 = local1;
 	glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &global1[0][0]);
-
-	// render boxes
-	glBindVertexArray(containerVAO);
-
+	
 	glUseProgram(programID);
 	GLint objectColorLoc = glGetUniformLocation(programID, "objectColor");
 	GLint lightColorLoc = glGetUniformLocation(programID, "lightColor");
@@ -314,33 +448,42 @@ void display()
 	glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
 	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
 
+	// DRAW FOOTBALL
+	mat4 globalRootTransform = football.createTransform();// Root of the Hierarchy				
+	updateUniformVariables(globalRootTransform);
+	football.globalTransform = globalRootTransform; // keep current state
+	//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
 
 	glBindVertexArray(containerVAO);
-	//draw cube
-	glm::mat4 model(1.0f);
+	linkCurrentBuffertoShader(MeshType::football);
+	football.Draw();
 
-	glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &model[0][0]);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glBindVertexArray(containerVAO);
+	////draw cube
+	//glm::mat4 model(1.0f);
 
-	glBindVertexArray(0);
+	//glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &model[0][0]);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
 
-	// Lamp
-	glUseProgram(lightingID);
-	// Get location objects for the matrices on the lamp shader (these could be different on a different shader)
-	GLint modelLoc = glGetUniformLocation(lightingID, "model");
-	GLint viewLoc = glGetUniformLocation(lightingID, "view");
-	GLint projLoc = glGetUniformLocation(lightingID, "projection");
-	// Set matrices
-	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-	model = glm::mat4();
-	model = glm::translate(model, lightPos);
-	model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-	// Draw the light object (using light's vertex attributes)
-	glBindVertexArray(lightVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glBindVertexArray(0);
+	//glBindVertexArray(0);
+
+	//// Lamp
+	//glUseProgram(lightingID);
+	//// Get location objects for the matrices on the lamp shader (these could be different on a different shader)
+	//GLint modelLoc = glGetUniformLocation(lightingID, "model");
+	//GLint viewLoc = glGetUniformLocation(lightingID, "view");
+	//GLint projLoc = glGetUniformLocation(lightingID, "projection");
+	//// Set matrices
+	//glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	//glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+	//model = glm::mat4();
+	//model = glm::translate(model, lightPos);
+	//model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
+	//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	//// Draw the light object (using light's vertex attributes)
+	//glBindVertexArray(lightVAO);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glBindVertexArray(0);
 
 	glPopMatrix();
 
@@ -393,7 +536,7 @@ int main(void) {
 
 	init();
 
-	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0) 
+	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0)
 	{
 		display();
 	}
