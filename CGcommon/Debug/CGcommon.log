@@ -1,0 +1,11 @@
+﻿  main.cpp
+u:\computer graphics\cgcommon\cgcommon\main.cpp(293): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(382): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(411): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(412): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(416): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(417): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(418): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(419): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+u:\computer graphics\cgcommon\cgcommon\main.cpp(446): warning C4244: '-=': conversion from 'double' to 'float', possible loss of data
+  CGcommon.vcxproj -> U:\Computer Graphics\CGcommon\Debug\CGcommon.exe
