@@ -257,6 +257,84 @@ void init()
 	glEnable(GL_DEPTH_TEST);
 }
 
+void display()
+{
+	float currentFrame = glfwGetTime();
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+
+	// inpuT
+	processInput(window);
+
+	// render
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glPushMatrix();
+	glLoadIdentity();
+	// activate shader
+	glUseProgram(programID);
+
+	// pass projection matrix to shader (note that in this case it could change every frame)
+	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, &projection[0][0]);
+	// camera/view transformation
+	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, &view[0][0]);
+	//root camera
+	glm::mat4 local1(1.0f);
+	local1 = glm::translate(local1, cameraPos);
+	glm::mat4 global1 = local1;
+	glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &global1[0][0]);
+
+	// render boxes
+	glBindVertexArray(containerVAO);
+
+	glUseProgram(programID);
+	GLint objectColorLoc = glGetUniformLocation(programID, "objectColor");
+	GLint lightColorLoc = glGetUniformLocation(programID, "lightColor");
+	GLint lightPosLoc = glGetUniformLocation(programID, "lightPos");
+	GLint viewPosLoc = glGetUniformLocation(programID, "viewPos");
+	glUniform3f(objectColorLoc, 1.0f, 0.5f, 0.31f);
+	glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f);
+	glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
+	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
+
+
+	glBindVertexArray(containerVAO);
+	//draw cube
+	glm::mat4 model(1.0f);
+
+	glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &model[0][0]);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	glBindVertexArray(0);
+
+	// Lamp
+	glUseProgram(lightingID);
+	// Get location objects for the matrices on the lamp shader (these could be different on a different shader)
+	GLint modelLoc = glGetUniformLocation(lightingID, "model");
+	GLint viewLoc = glGetUniformLocation(lightingID, "view");
+	GLint projLoc = glGetUniformLocation(lightingID, "projection");
+	// Set matrices
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+	model = glm::mat4();
+	model = glm::translate(model, lightPos);
+	model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	// Draw the light object (using light's vertex attributes)
+	glBindVertexArray(lightVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+
+	glPopMatrix();
+
+	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+	glfwSwapBuffers(window);
+	glfwPollEvents();
+}
+
 int main(void) {
 	// Initialise GLFW
 	if (!glfwInit())
@@ -301,83 +379,9 @@ int main(void) {
 
 	init();
 
-	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
-		glfwWindowShouldClose(window) == 0) {
-
-		float currentFrame = glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-
-		// inpuT
-		processInput(window);
-
-		// render
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glPushMatrix();
-		glLoadIdentity();
-		// activate shader
-		glUseProgram(programID);
-
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
-		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, &projection[0][0]);
-		// camera/view transformation
-		glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-		glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, &view[0][0]);
-		//root camera
-		glm::mat4 local1(1.0f);
-		local1 = glm::translate(local1, cameraPos);
-		glm::mat4 global1 = local1;
-		glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &global1[0][0]);
-
-		// render boxes
-		glBindVertexArray(containerVAO);
-
-		glUseProgram(programID);
-		GLint objectColorLoc = glGetUniformLocation(programID, "objectColor");
-		GLint lightColorLoc = glGetUniformLocation(programID, "lightColor");
-		GLint lightPosLoc = glGetUniformLocation(programID, "lightPos");
-		GLint viewPosLoc = glGetUniformLocation(programID, "viewPos");
-		glUniform3f(objectColorLoc, 1.0f, 0.5f, 0.31f);
-		glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f);
-		glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
-		glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
-
-
-		glBindVertexArray(containerVAO);
-		//draw cube
-		glm::mat4 model(1.0f);
-
-		glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &model[0][0]);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-	
-		glBindVertexArray(0);
-
-		// Lamp
-		glUseProgram(lightingID);
-		// Get location objects for the matrices on the lamp shader (these could be different on a different shader)
-		GLint modelLoc = glGetUniformLocation(lightingID, "model");
-		GLint viewLoc = glGetUniformLocation(lightingID, "view");
-		GLint projLoc = glGetUniformLocation(lightingID, "projection");
-		// Set matrices
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		model = glm::mat4();
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		// Draw the light object (using light's vertex attributes)
-		glBindVertexArray(lightVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
-
-		glPopMatrix();
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0) 
+	{
+		display();
 	}
 
 	// optional: de-allocate all resources once they've outlived their purpose:
