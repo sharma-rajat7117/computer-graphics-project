@@ -341,13 +341,13 @@ void createObjects()
 	//n_ibovertices += cube.Mesh.Indices.size();
 
 	// load meshes with OBJ Loader	
-	const char* footballFileName = "../CGCommon/meshes/Football/football2.obj";
+	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 
 	// football
 	football = CGCommon::CGObject();
 	football.Mesh = LoadMesh(footballFileName);
 	football.initialTranslateVector = vec3(0.0f, 0.0f, 0.0f);
-	football.initialScaleVector = vec3(0.2f, 0.2f, 0.2f);
+	football.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
 	football.color = vec3(0.0f, 0.0f, 1.0f);   // Quick solution for color as we are not using texture
 	football.startVBO = n_vbovertices;
 	football.startIBO = n_ibovertices;
