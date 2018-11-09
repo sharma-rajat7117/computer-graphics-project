@@ -15,9 +15,6 @@ GLFWwindow* window;
 #include <glm/gtc/type_ptr.hpp>
 using namespace glm;
 
-//TEST - VO
-
-
 //include transformation functions
 #include <glm/gtc/matrix_transform.hpp>
 
