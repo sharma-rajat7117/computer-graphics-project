@@ -43,6 +43,19 @@ GLfloat rotate_angle = 0.0f;
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1100;
 
+// Shaders
+GLuint programID; 
+GLuint lightingID;
+
+// Uniform locations
+int model_mat_location;
+int view_mat_location;
+int proj_mat_location;
+
+// Buffers
+GLuint VBO, containerVAO;
+GLuint lightVAO;
+
 // camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -155,48 +168,8 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 	return ProgramID;
 }
 
-int main(void) {
-	// Initialise GLFW
-	if (!glfwInit())
-	{
-		fprintf(stderr, "Failed to initialize GLFW\n");
-		getchar();
-		return -1;
-	}
-
-	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Computer Graphics Assignment", NULL, NULL);
-	if (window == NULL) {
-		fprintf(stderr, "Failed to open GLFW window.\n");
-		getchar();
-		glfwTerminate();
-		return -1;
-	}
-
-	//detect key inputs
-	//glfwSetKeyCallback(window, keycallback);
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, 1);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
-
-	// Initialize GLEW
-	glewExperimental = true; // Needed for core profile
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		getchar();
-		glfwTerminate();
-		return -1;
-	}
-
+void init()
+{
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
 	GLfloat vertices[] =
@@ -245,7 +218,7 @@ int main(void) {
 	};
 
 	// First, set the container's VAO (and VBO)
-	GLuint VBO, containerVAO;
+	
 	glGenVertexArrays(1, &containerVAO);
 	glGenBuffers(1, &VBO);
 
@@ -262,8 +235,7 @@ int main(void) {
 	glEnableVertexAttribArray(1);
 	glBindVertexArray(0);
 
-	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))
-	GLuint lightVAO;
+	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
 	glGenVertexArrays(1, &lightVAO);
 	glBindVertexArray(lightVAO);
 	// We only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need.
@@ -274,17 +246,60 @@ int main(void) {
 	glBindVertexArray(0);
 
 	// Create and compile our shaders
-	GLuint programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
-	GLuint lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
-
-
+	programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
+	lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
+	
 	//Declare your uniform variables that will be used in your shader
-	int model_mat_location = glGetUniformLocation(programID, "model");
-	int view_mat_location = glGetUniformLocation(programID, "view");
-	int proj_mat_location = glGetUniformLocation(programID, "projection");
+	model_mat_location = glGetUniformLocation(programID, "model");
+	view_mat_location = glGetUniformLocation(programID, "view");
+	proj_mat_location = glGetUniformLocation(programID, "projection");
 
 	glEnable(GL_DEPTH_TEST);
+}
 
+int main(void) {
+	// Initialise GLFW
+	if (!glfwInit())
+	{
+		fprintf(stderr, "Failed to initialize GLFW\n");
+		getchar();
+		return -1;
+	}
+
+	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	// Open a window and create its OpenGL context
+	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Computer Graphics Assignment", NULL, NULL);
+	if (window == NULL) {
+		fprintf(stderr, "Failed to open GLFW window.\n");
+		getchar();
+		glfwTerminate();
+		return -1;
+	}
+
+	//detect key inputs
+	//glfwSetKeyCallback(window, keycallback);
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, 1);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+
+	// Initialize GLEW
+	glewExperimental = true; // Needed for core profile
+	if (glewInit() != GLEW_OK) {
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		glfwTerminate();
+		return -1;
+	}
+
+	init();
 
 	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
 		glfwWindowShouldClose(window) == 0) {
