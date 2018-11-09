@@ -168,7 +168,22 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 	return ProgramID;
 }
 
-void init()
+void createShaders()
+{
+	// Create and compile our shaders
+	programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
+	lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
+}
+
+void setupUniformVariables()
+{
+	//Declare your uniform variables that will be used in your shader
+	model_mat_location = glGetUniformLocation(programID, "model");
+	view_mat_location = glGetUniformLocation(programID, "view");
+	proj_mat_location = glGetUniformLocation(programID, "projection");
+}
+
+void createObjects()
 {
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
@@ -217,8 +232,7 @@ void init()
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
 
-	// First, set the container's VAO (and VBO)
-	
+	// First, set the container's VAO (and VBO)	
 	glGenVertexArrays(1, &containerVAO);
 	glGenBuffers(1, &VBO);
 
@@ -244,17 +258,17 @@ void init()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0); // Note that we skip over the normal vectors
 	glEnableVertexAttribArray(0);
 	glBindVertexArray(0);
+}
 
-	// Create and compile our shaders
-	programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
-	lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
-	
-	//Declare your uniform variables that will be used in your shader
-	model_mat_location = glGetUniformLocation(programID, "model");
-	view_mat_location = glGetUniformLocation(programID, "view");
-	proj_mat_location = glGetUniformLocation(programID, "projection");
-
+void init()
+{
 	glEnable(GL_DEPTH_TEST);
+
+	createShaders();
+
+	setupUniformVariables();
+
+	createObjects();
 }
 
 void display()
@@ -350,7 +364,7 @@ int main(void) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Computer Graphics Assignment", NULL, NULL);
+	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Physically Based Animation", NULL, NULL);
 	if (window == NULL) {
 		fprintf(stderr, "Failed to open GLFW window.\n");
 		getchar();
