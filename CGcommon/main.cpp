@@ -287,21 +287,23 @@ objl::Mesh groundMesh()
 {
 	objl::Vertex point1, point2, point3, point4, point5, point6, point7, point8 = objl::Vertex();
 
-	point1.Position = objl::Vector3(-1.0f, -0.5f, -0.5f);
-	point1.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-	point2.Position = objl::Vector3(-1.0f, 0.5f, -0.5f);
+	float size = 20.0f;
+
+	point1.Position = objl::Vector3(-size, -0.5f, -size);
+	point1.Normal = objl::Vector3(0.0f, -1.0f, 0.0f);
+	point2.Position = objl::Vector3(-size, 0.5f, -size);
 	point2.Normal = objl::Vector3(0.0f, -1.0f, 0.0f);
-	point3.Position = objl::Vector3(-0.5f, -0.5f, 0.5f);
+	point3.Position = objl::Vector3(-size, -0.5f, size);
 	point3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-	point4.Position = objl::Vector3(-0.5f, 0.5f, 0.5f);
+	point4.Position = objl::Vector3(-size, 0.5f, size);
 	point4.Normal = objl::Vector3(0.0f, -1.0f, 0.0f);
-	point5.Position = objl::Vector3(0.5f, -0.5f, 0.5f);
+	point5.Position = objl::Vector3(size, -0.5f, size);
 	point5.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-	point6.Position = objl::Vector3(0.5f, 0.5f, 0.5f);
+	point6.Position = objl::Vector3(size, 0.5f, size);
 	point6.Normal = objl::Vector3(0.0f, -1.0f, 0.0f);
-	point7.Position = objl::Vector3(0.5f, -0.5f, -0.5f);
+	point7.Position = objl::Vector3(size, -0.5f, -size);
 	point7.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-	point8.Position = objl::Vector3(0.5f, 0.5f, -0.5f);
+	point8.Position = objl::Vector3(size, 0.5f, -size);
 	point8.Normal = objl::Vector3(0.0f, -1.0f, 0.0f);
 
 	point1.TextureCoordinate = point2.TextureCoordinate = point3.TextureCoordinate = point4.TextureCoordinate =
@@ -357,7 +359,7 @@ objl::Mesh PlaneMesh()
 		0, 2, 3 };
 
 	objl::Mesh mesh = objl::Mesh(vertices, indices);
-	mesh.MeshName = "ground";
+	mesh.MeshName = "plane";
 	return mesh;
 }
 
@@ -379,9 +381,9 @@ void createObjects()
 	int n_vbovertices = 0;
 	int n_ibovertices = 0;
 
-	CGCommon::CGObject ground = CGCommon::CGObject();
+	ground = CGCommon::CGObject();
 	ground.Mesh = groundMesh();
-	ground.initialTranslateVector = vec3(0.0f, 0.0f, 0.0f);
+	ground.initialTranslateVector = vec3(0.0f, -1.0f, 0.0f);
 	ground.initialScaleVector = vec3(0.5f, 0.5f, 0.5f);
 	ground.color = vec3(0.0f, 1.0f, 0.0f);   // Quick solution for color as we are not using texture
 	ground.startVBO = n_vbovertices;
@@ -516,18 +518,18 @@ void display()
 	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
 
 	// DRAW GROUND
-	mat4 globalGroundTransform = ground.createTransform();// Root of the Hierarchy				
+	mat4 globalGroundTransform = ground.createTransform();				
 	updateUniformVariables(globalGroundTransform);
 	ground.globalTransform = globalGroundTransform; // keep current state
 	//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
 
 	glBindVertexArray(groundVAO);
 	linkCurrentBuffertoShader(ground);
-	glUniform3f(objectColorLoc, 1.0f, 0.0f, 0.0f);
+	glUniform3f(objectColorLoc, 0.2f, 0.2f, 0.0f);
 	ground.Draw();
 
 	// DRAW FOOTBALL - white
-	mat4 globalFootballwTransform = footballw.createTransform();// Root of the Hierarchy				
+	mat4 globalFootballwTransform = footballw.createTransform();				
 	updateUniformVariables(globalFootballwTransform);
 	footballw.globalTransform = globalFootballwTransform; // keep current state
 	//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
@@ -538,7 +540,7 @@ void display()
 	footballw.Draw();
 
 	// DRAW FOOTBALL - black
-	mat4 globalFootballbTransform = footballb.createTransform();// Root of the Hierarchy				
+	mat4 globalFootballbTransform = footballb.createTransform();			
 	updateUniformVariables(globalFootballbTransform);
 	footballb.globalTransform = globalFootballbTransform; // keep current state
 														//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
