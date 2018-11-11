@@ -13,6 +13,7 @@ GLFWwindow* window;
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 using namespace glm;
 
 //include transformation functions
@@ -27,9 +28,12 @@ using namespace glm;
 #include <sstream>
 
 #include "CGobject.h"
+#include "Physics.h"
 #include "..\Dependencies\OBJ_Loader.h"
 
 using namespace std;
+using namespace CGCommon;
+using namespace Physics;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -79,8 +83,9 @@ glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // objects
-CGCommon::CGObject ground;
-CGCommon::CGObject footballw, footballb;
+CGObject ground;
+CGObject footballw, footballb;
+CGObject sceneObjects[] = { footballw, footballb };  // include objects that are subject to Physics
 
 bool firstMouse = true;
 float myyaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
@@ -406,7 +411,7 @@ void createObjects()
 	footballb.Mesh = meshes[1];
 	footballb.Mesh.MeshName = "footballb";
 
-	footballw.initialTranslateVector = footballb.initialTranslateVector = vec3(0.0f, 0.0f, 0.0f);
+	footballw.initialTranslateVector = footballb.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
 	footballw.initialScaleVector = footballb.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
 	//footballw.color = vec3(0.0f, 0.0f, 1.0f);   // Quick solution for color as we are not using texture
 	
@@ -424,7 +429,7 @@ void createObjects()
 	loc1 = glGetAttribLocation(programID, "position");
 	loc2 = glGetAttribLocation(programID, "normal");
 	loc3 = glGetAttribLocation(programID, "texture");
-
+	
 	// Create VBO
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -477,6 +482,20 @@ void init()
 	createObjects();
 }
 
+void updatePhysics(float deltaTime)
+{
+	for (int i = 0; i < sizeof(sceneObjects) / sizeof(CGObject); i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			sceneObjects[i].translateVector[j] += deltaTime * sceneObjects[i].velocity[j];
+			sceneObjects[i].velocity[j] += deltaTime * forces(i, j) / sceneObjects[i].mass;
+		}
+
+		//collision(i);
+	}
+}
+
 void display()
 {
 	float currentFrame = glfwGetTime();
@@ -490,7 +509,8 @@ void display()
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//glPushMatrix();
+	glPushMatrix();
+
 	glLoadIdentity();
 	// activate shader
 	glUseProgram(programID);
@@ -577,8 +597,10 @@ void display()
 	//glDrawArrays(GL_TRIANGLES, 0, 36);
 	//glBindVertexArray(0);
 
-	//glPopMatrix();
+	updatePhysics(deltaTime);
 
+	glPopMatrix();
+	
 	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 	glfwSwapBuffers(window);
 	glfwPollEvents();

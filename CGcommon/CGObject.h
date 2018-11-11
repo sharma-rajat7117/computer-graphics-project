@@ -32,6 +32,10 @@ namespace CGCommon
 		// Color
 		glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f); // White
 
+		// Physics
+		glm::vec4 velocity = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);   // not moving
+		float mass = 1.0f;  // 1kg ?
+
 		// Current position
 		glm::mat4 globalTransform = glm::mat4(1.0);
 		
