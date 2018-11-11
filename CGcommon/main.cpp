@@ -135,7 +135,7 @@ void linkCurrentBuffertoShader(CGCommon::CGObject cg_object)
 	
 	bindVertexAttribute(loc1, 3, cg_object.startVBO, 0);
 	bindVertexAttribute(loc2, 3, cg_object.startVBO, 3);
-	bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
+	bindVertexAttribute(loc3, 3, cg_object.startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
 
 	//IBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -411,8 +411,10 @@ void createObjects()
 	footballb.Mesh = meshes[1];
 	footballb.Mesh.MeshName = "footballb";
 
-	footballw.initialTranslateVector = footballb.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
-	footballw.initialScaleVector = footballb.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
+	footballw.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
+	footballb.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
+	footballw.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
+	footballb.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
 	//footballw.color = vec3(0.0f, 0.0f, 1.0f);   // Quick solution for color as we are not using texture
 	
 	footballw.startVBO = n_vbovertices;
@@ -484,16 +486,24 @@ void init()
 
 void updatePhysics(float deltaTime)
 {
-	for (int i = 0; i < sizeof(sceneObjects) / sizeof(CGObject); i++)
+	for (int j = 0; j < 3; j++)
+	{
+		footballw.translateVector[j] += deltaTime * footballw.velocity[j];//sceneObjects[i].velocity[j];
+		footballw.velocity[j] += 0.01* forces(0, j) / footballw.mass;
+		footballb.translateVector[j] += deltaTime * footballb.velocity[j];//sceneObjects[i].velocity[j];
+		footballb.velocity[j] += 0.01* forces(1, j) / footballb.mass;
+	}
+	//cout << deltaTime << " " << footballw.velocity[1] << footballw.translateVector[1] << endl; //debug shench
+	/*for (int i = 0; i < sizeof(sceneObjects) / sizeof(CGObject); i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
-			sceneObjects[i].translateVector[j] += deltaTime * sceneObjects[i].velocity[j];
-			sceneObjects[i].velocity[j] += deltaTime * forces(i, j) / sceneObjects[i].mass;
+			sceneObjects[i].translateVector[j] += deltaTime * 10;//sceneObjects[i].velocity[j];
+			sceneObjects[i].velocity[j] += deltaTime * 10;//forces(i, j) / sceneObjects[i].mass;
 		}
 
-		//collision(i);
-	}
+		collision(i);
+	}*/
 }
 
 void display()
@@ -596,6 +606,11 @@ void display()
 	//glBindVertexArray(lightVAO);
 	//glDrawArrays(GL_TRIANGLES, 0, 36);
 	//glBindVertexArray(0);
+
+
+	
+		
+
 
 	updatePhysics(deltaTime);
 
