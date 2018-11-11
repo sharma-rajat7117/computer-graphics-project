@@ -103,12 +103,6 @@ glm::vec3 lightPos(1.0f, 1.0f, 3.0f);
 
 bool rotateCubes = false;
 
-enum class MeshType
-{
-	ground,
-	football,
-};
-
 void bindVertexAttribute(int location, int locationSize, int startVBO, int offsetVBO)
 {
 	glEnableVertexAttribArray(location);
@@ -484,6 +478,36 @@ void init()
 	createObjects();
 }
 
+void collision()
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (footballw.translateVector[i] >= 1.0)
+		{
+			footballw.velocity[i] = -coef * footballw.velocity[i];
+			footballw.translateVector[i] = 1.0 - coef * (footballw.translateVector[i] - 1.0);
+		}
+
+		if (footballw.translateVector[i] <= -1.0)
+		{
+			footballw.velocity[i] = -coef * footballw.velocity[i];
+			footballw.translateVector[i] = -1.0 - coef * (footballw.translateVector[i] + 1.0);
+		}
+
+		if (footballb.translateVector[i] >= 1.0)
+		{
+			footballb.velocity[i] = -coef * footballb.velocity[i];
+			footballb.translateVector[i] = 1.0 - coef * (footballb.translateVector[i] - 1.0);
+		}
+
+		if (footballb.translateVector[i] <= -1.0)
+		{
+			footballb.velocity[i] = -coef * footballb.velocity[i];
+			footballb.translateVector[i] = -1.0 - coef * (footballb.translateVector[i] + 1.0);
+		}
+	}
+}
+
 void updatePhysics(float deltaTime)
 {
 	for (int j = 0; j < 3; j++)
@@ -501,9 +525,9 @@ void updatePhysics(float deltaTime)
 			sceneObjects[i].translateVector[j] += deltaTime * 10;//sceneObjects[i].velocity[j];
 			sceneObjects[i].velocity[j] += deltaTime * 10;//forces(i, j) / sceneObjects[i].mass;
 		}
-
-		collision(i);
 	}*/
+	
+	collision();	
 }
 
 void display()
