@@ -85,7 +85,7 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 // objects
 CGObject ground;
 CGObject footballw, footballb;
-CGObject sceneObjects[] = { footballw, footballb };  // include objects that are subject to Physics
+CGObject *sceneObjects[] = { &footballw, &footballb };  // include objects that are subject to Physics
 
 bool firstMouse = true;
 float myyaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
@@ -110,26 +110,26 @@ void bindVertexAttribute(int location, int locationSize, int startVBO, int offse
 	glVertexAttribPointer(location, locationSize, GL_FLOAT, GL_TRUE, 8 * sizeof(float), (void*)(startVBO * 8 * sizeof(float) + BUFFER_OFFSET(offsetVBO * sizeof(GLfloat))));
 }
 
-void linkCurrentBuffertoShader(CGCommon::CGObject cg_object)
+void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 {
-	if (cg_object.Mesh.MeshName == "footballw")
+	if (cg_object -> Mesh.MeshName == "footballw")
 	{
 		glBindVertexArray(footballwVAO);
 	}
 
-	if (cg_object.Mesh.MeshName == "footballb")
+	if (cg_object ->Mesh.MeshName == "footballb")
 	{
 		glBindVertexArray(footballbVAO);
 	}
 
-	if (cg_object.Mesh.MeshName == "ground")
+	if (cg_object -> Mesh.MeshName == "ground")
 	{
 		glBindVertexArray(groundVAO);
 	}
-	
-	bindVertexAttribute(loc1, 3, cg_object.startVBO, 0);
-	bindVertexAttribute(loc2, 3, cg_object.startVBO, 3);
-	bindVertexAttribute(loc3, 3, cg_object.startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
+
+	bindVertexAttribute(loc1, 3, cg_object -> startVBO, 0);
+	bindVertexAttribute(loc2, 3, cg_object -> startVBO, 3);
+	bindVertexAttribute(loc3, 3, cg_object -> startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
 
 	//IBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -157,7 +157,7 @@ void addToObjectBuffer(CGCommon::CGObject cg_object)  //MeshType meshType, int s
 		glGenVertexArrays(1, &groundVAO);
 	}
 
-	linkCurrentBuffertoShader(cg_object);
+	linkCurrentBuffertoShader(&cg_object);
 }
 
 void updateUniformVariables(glm::mat4 model)
@@ -324,7 +324,7 @@ objl::Mesh groundMesh()
 	};
 
 	objl::Mesh mesh = objl::Mesh(vertices, indices);
-	mesh.MeshName = "ground";	
+	mesh.MeshName = "ground";
 	mesh.MeshMaterial.Ns = 94.0;
 	mesh.MeshMaterial.Ni = 1.0;
 	mesh.MeshMaterial.d = 1.0;
@@ -395,10 +395,10 @@ void createObjects()
 
 	// football
 	vector<objl::Mesh> meshes = LoadMeshes(footballFileName);   // returns 2
-	
+
 	footballw = CGCommon::CGObject();
-	footballb = CGCommon::CGObject();	
-			
+	footballb = CGCommon::CGObject();
+
 	// create 2 objects - one for White and one for Black	
 	footballw.Mesh = meshes[0];
 	footballw.Mesh.MeshName = "footballw";
@@ -409,8 +409,9 @@ void createObjects()
 	footballb.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
 	footballw.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
 	footballb.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
-	//footballw.color = vec3(0.0f, 0.0f, 1.0f);   // Quick solution for color as we are not using texture
-	
+	footballw.color = vec3(1.0f, 1.0f, 1.0f);   // Quick solution for color as we are not using texture
+	footballb.color = vec3(0.0f, 0.0f, 0.0f);
+
 	footballw.startVBO = n_vbovertices;
 	footballw.startIBO = n_ibovertices;
 	n_vbovertices += footballw.Mesh.Vertices.size();
@@ -420,12 +421,12 @@ void createObjects()
 	footballb.startIBO = n_ibovertices;
 	n_vbovertices += footballb.Mesh.Vertices.size();
 	n_ibovertices += footballb.Mesh.Indices.size();
-	
+
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
 	loc2 = glGetAttribLocation(programID, "normal");
 	loc3 = glGetAttribLocation(programID, "texture");
-	
+
 	// Create VBO
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -434,27 +435,17 @@ void createObjects()
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
 	// Start addition objects to containerVAO	
-	addToObjectBuffer(ground); 
+	addToObjectBuffer(ground);
 	addToObjectBuffer(footballw);
 	addToObjectBuffer(footballb);
 
-		// Create IBO
+	// Create IBO
 	glGenBuffers(1, &IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ibovertices * sizeof(unsigned int), NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
-
-	//glBindVertexArray(containerVAO);
-	//// Position attribute
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0);
-	//glEnableVertexAttribArray(0);
-
-	//// Normal attribute
-	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)(3 * sizeof(GLfloat)));
-	//glEnableVertexAttribArray(1);
-	//glBindVertexArray(0);
 
 	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
 	glGenVertexArrays(1, &lightVAO);
@@ -478,56 +469,33 @@ void init()
 	createObjects();
 }
 
-void collision()
+void collision(int n)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		if (footballw.translateVector[i] >= 1.0)
+		if (sceneObjects[n]->translateVector[i] >= 1.0)
 		{
-			footballw.velocity[i] = -coef * footballw.velocity[i];
-			footballw.translateVector[i] = 1.0 - coef * (footballw.translateVector[i] - 1.0);
+			sceneObjects[n]->velocity[i] = -coef * sceneObjects[n]->velocity[i];
+			sceneObjects[n]->translateVector[i] = 1.0 - coef * (sceneObjects[n]->translateVector[i] - 1.0);
 		}
 
-		if (footballw.translateVector[i] <= -1.0)
+		if (sceneObjects[n]->translateVector[i] <= -1.0)
 		{
-			footballw.velocity[i] = -coef * footballw.velocity[i];
-			footballw.translateVector[i] = -1.0 - coef * (footballw.translateVector[i] + 1.0);
-		}
-
-		if (footballb.translateVector[i] >= 1.0)
-		{
-			footballb.velocity[i] = -coef * footballb.velocity[i];
-			footballb.translateVector[i] = 1.0 - coef * (footballb.translateVector[i] - 1.0);
-		}
-
-		if (footballb.translateVector[i] <= -1.0)
-		{
-			footballb.velocity[i] = -coef * footballb.velocity[i];
-			footballb.translateVector[i] = -1.0 - coef * (footballb.translateVector[i] + 1.0);
+			sceneObjects[n]->velocity[i] = -coef * sceneObjects[n]->velocity[i];
+			sceneObjects[n]->translateVector[i] = -1.0 - coef * (sceneObjects[n]->translateVector[i] + 1.0);
 		}
 	}
 }
 
-void updatePhysics(float deltaTime)
+void updatePhysics(float deltaTime, int n)
 {
 	for (int j = 0; j < 3; j++)
 	{
-		footballw.translateVector[j] += deltaTime * footballw.velocity[j];//sceneObjects[i].velocity[j];
-		footballw.velocity[j] += 0.01* forces(0, j) / footballw.mass;
-		footballb.translateVector[j] += deltaTime * footballb.velocity[j];//sceneObjects[i].velocity[j];
-		footballb.velocity[j] += 0.01* forces(1, j) / footballb.mass;
+		sceneObjects[n]->translateVector[j] += deltaTime * sceneObjects[n]->velocity[j];
+		sceneObjects[n]->velocity[j] += deltaTime * forces(n, j) / sceneObjects[n]->mass;
 	}
-	//cout << deltaTime << " " << footballw.velocity[1] << footballw.translateVector[1] << endl; //debug shench
-	/*for (int i = 0; i < sizeof(sceneObjects) / sizeof(CGObject); i++)
-	{
-		for (int j = 0; j < 3; j++)
-		{
-			sceneObjects[i].translateVector[j] += deltaTime * 10;//sceneObjects[i].velocity[j];
-			sceneObjects[i].velocity[j] += deltaTime * 10;//forces(i, j) / sceneObjects[i].mass;
-		}
-	}*/
-	
-	collision();	
+
+	collision(n);
 }
 
 void display()
@@ -540,7 +508,7 @@ void display()
 	processInput(window);
 
 	// render
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glPushMatrix();
@@ -572,74 +540,30 @@ void display()
 	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
 
 	// DRAW GROUND
-	mat4 globalGroundTransform = ground.createTransform();				
+	mat4 globalGroundTransform = ground.createTransform();
 	updateUniformVariables(globalGroundTransform);
-	ground.globalTransform = globalGroundTransform; // keep current state
-	//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
+	ground.globalTransform = globalGroundTransform; // keep current state	
 
-	glBindVertexArray(groundVAO);
-	linkCurrentBuffertoShader(ground);
-	glUniform3f(objectColorLoc, 0.2f, 0.2f, 0.0f);
+	linkCurrentBuffertoShader(&ground);
+	glUniform3f(objectColorLoc, ground.color.r, ground.color.g, ground.color.b);
 	ground.Draw();
 
-	// DRAW FOOTBALL - white
-	mat4 globalFootballwTransform = footballw.createTransform();				
-	updateUniformVariables(globalFootballwTransform);
-	footballw.globalTransform = globalFootballwTransform; // keep current state
-	//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
+	// DRAW objects under gravity
+	for (int i = 0; i < 2; i++)     // TODO : need to fix this hardcoding
+	{
+		mat4 globalFootballwTransform = sceneObjects[i] ->createTransform();
+		updateUniformVariables(globalFootballwTransform);
+		sceneObjects[i] -> globalTransform = globalFootballwTransform; // keep current state		
+				
+		linkCurrentBuffertoShader(sceneObjects[i]);		
+		glUniform3f(objectColorLoc, sceneObjects[i] ->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b); 
+		sceneObjects[i] -> Draw();
 
-	glBindVertexArray(footballwVAO);
-	linkCurrentBuffertoShader(footballw);
-	glUniform3f(objectColorLoc, 1.0f, 1.0f, 1.0f);
-	footballw.Draw();
-
-	// DRAW FOOTBALL - black
-	mat4 globalFootballbTransform = footballb.createTransform();			
-	updateUniformVariables(globalFootballbTransform);
-	footballb.globalTransform = globalFootballbTransform; // keep current state
-														//glUniform3f(quickObjectColor_location, football.color.v[0], football.color.v[1], football.color.v[2]);
-
-	glBindVertexArray(footballbVAO);
-	linkCurrentBuffertoShader(footballb);
-	glUniform3f(objectColorLoc, 0.0f, 0.0f, 0.0f);
-	footballb.Draw();
-
-	//glBindVertexArray(containerVAO);
-	////draw cube
-	//glm::mat4 model(1.0f);
-
-	//glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, &model[0][0]);
-	//glDrawArrays(GL_TRIANGLES, 0, 36);
-
-	//glBindVertexArray(0);
-
-	//// Lamp
-	//glUseProgram(lightingID);
-	//// Get location objects for the matrices on the lamp shader (these could be different on a different shader)
-	//GLint modelLoc = glGetUniformLocation(lightingID, "model");
-	//GLint viewLoc = glGetUniformLocation(lightingID, "view");
-	//GLint projLoc = glGetUniformLocation(lightingID, "projection");
-	//// Set matrices
-	//glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-	//glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-	//model = glm::mat4();
-	//model = glm::translate(model, lightPos);
-	//model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
-	//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-	//// Draw the light object (using light's vertex attributes)
-	//glBindVertexArray(lightVAO);
-	//glDrawArrays(GL_TRIANGLES, 0, 36);
-	//glBindVertexArray(0);
-
-
-	
-		
-
-
-	updatePhysics(deltaTime);
+		updatePhysics(deltaTime, i);
+	}
 
 	glPopMatrix();
-	
+
 	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 	glfwSwapBuffers(window);
 	glfwPollEvents();
