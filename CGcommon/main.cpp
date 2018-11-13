@@ -76,6 +76,7 @@ GLuint groundVAO;
 GLuint footballwVAO;
 GLuint footballbVAO;
 GLuint lightVAO;
+GLuint treeVAO;
 
 // camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -84,7 +85,8 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // objects
 CGObject ground;
-CGObject footballw, footballb;
+CGObject footballw, footballb,tree;
+
 CGObject *sceneObjects[] = { &footballw, &footballb };  // include objects that are subject to Physics
 
 bool firstMouse = true;
@@ -112,24 +114,28 @@ void bindVertexAttribute(int location, int locationSize, int startVBO, int offse
 
 void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 {
-	if (cg_object -> Mesh.MeshName == "footballw")
+	if (cg_object->Mesh.MeshName == "footballw")
 	{
 		glBindVertexArray(footballwVAO);
 	}
 
-	if (cg_object ->Mesh.MeshName == "footballb")
+	if (cg_object->Mesh.MeshName == "footballb")
 	{
 		glBindVertexArray(footballbVAO);
 	}
 
-	if (cg_object -> Mesh.MeshName == "ground")
+	if (cg_object->Mesh.MeshName == "ground")
 	{
 		glBindVertexArray(groundVAO);
 	}
 
-	bindVertexAttribute(loc1, 3, cg_object -> startVBO, 0);
-	bindVertexAttribute(loc2, 3, cg_object -> startVBO, 3);
-	bindVertexAttribute(loc3, 3, cg_object -> startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
+	if (cg_object->Mesh.MeshName == "tree")
+	{
+		glBindVertexArray(treeVAO);
+	}
+	bindVertexAttribute(loc1, 3, cg_object->startVBO, 0);
+	bindVertexAttribute(loc2, 3, cg_object->startVBO, 3);
+	bindVertexAttribute(loc3, 3, cg_object->startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
 
 	//IBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -140,22 +146,6 @@ void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 void addToObjectBuffer(CGCommon::CGObject cg_object)  //MeshType meshType, int startVBO, int n_vertices, float *vertices)
 {
 	glBufferSubData(GL_ARRAY_BUFFER, cg_object.startVBO * 8 * sizeof(GLfloat), cg_object.Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object.Mesh.Vertices[0].Position.X);
-
-	// Vertex Attribute array	
-	if (cg_object.Mesh.MeshName == "footballw")
-	{
-		glGenVertexArrays(1, &footballwVAO);
-	}
-
-	if (cg_object.Mesh.MeshName == "footballb")
-	{
-		glGenVertexArrays(1, &footballbVAO);
-	}
-
-	if (cg_object.Mesh.MeshName == "ground")
-	{
-		glGenVertexArrays(1, &groundVAO);
-	}
 
 	linkCurrentBuffertoShader(&cg_object);
 }
@@ -270,8 +260,8 @@ GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_pat
 void createShaders()
 {
 	// Create and compile our shaders
-	programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
-	lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
+	programID = LoadShaders("../common-project/shaders/shader.vs", "../common-project/shaders/shader.fs");
+	lightingID = LoadShaders("../common-project/shaders/lighting.vs", "../common-project/shaders/lighting.fs");
 }
 
 void setupUniformVariables()
@@ -391,7 +381,14 @@ void createObjects()
 	n_ibovertices += ground.Mesh.Indices.size();
 
 	// load meshes with OBJ Loader	
-	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
+	const char* footballFileName = "../common-project/meshes/Football/football3.obj";
+
+	// tree
+	const char* treeFileName = "../common-project/meshes/DeadTree/DeadTree.obj";
+	vector<objl::Mesh> treemeshes = LoadMeshes(treeFileName);
+	tree = CGCommon::CGObject();
+	tree.Mesh = treemeshes[0];
+	tree.Mesh.MeshName = "tree";
 
 	// football
 	vector<objl::Mesh> meshes = LoadMeshes(footballFileName);   // returns 2
@@ -411,16 +408,30 @@ void createObjects()
 	footballb.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
 	footballw.color = vec3(1.0f, 1.0f, 1.0f);   // Quick solution for color as we are not using texture
 	footballb.color = vec3(0.0f, 0.0f, 0.0f);
+	
 
 	footballw.startVBO = n_vbovertices;
 	footballw.startIBO = n_ibovertices;
 	n_vbovertices += footballw.Mesh.Vertices.size();
 	n_ibovertices += footballw.Mesh.Indices.size();
 
+
 	footballb.startVBO = n_vbovertices;
 	footballb.startIBO = n_ibovertices;
 	n_vbovertices += footballb.Mesh.Vertices.size();
 	n_ibovertices += footballb.Mesh.Indices.size();
+
+	//tree
+	tree.initialTranslateVector = vec3(-0.75f, 0.5f, 0.0f);
+	tree.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
+	// Quick solution for color as we are not using texture
+	tree.color = vec3(0.139f, 0.69f, 0.19f);
+
+	tree.startVBO = n_vbovertices;
+	tree.startIBO = n_ibovertices;
+
+	n_vbovertices += tree.Mesh.Vertices.size();
+	n_ibovertices += tree.Mesh.Indices.size();
 
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
@@ -434,10 +445,16 @@ void createObjects()
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
+	glGenVertexArrays(1, &footballwVAO);
+	glGenVertexArrays(1, &footballbVAO);
+	glGenVertexArrays(1, &groundVAO);
+	glGenVertexArrays(1, &treeVAO);
+
 	// Start addition objects to containerVAO	
 	addToObjectBuffer(ground);
 	addToObjectBuffer(footballw);
 	addToObjectBuffer(footballb);
+	addToObjectBuffer(tree);
 
 	// Create IBO
 	glGenBuffers(1, &IBO);
@@ -446,6 +463,9 @@ void createObjects()
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
+
+
 
 	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
 	glGenVertexArrays(1, &lightVAO);
@@ -548,16 +568,25 @@ void display()
 	glUniform3f(objectColorLoc, ground.color.r, ground.color.g, ground.color.b);
 	ground.Draw();
 
+	// DRAW tree
+	mat4 globalTreeTransform = tree.createTransform();
+	updateUniformVariables(globalTreeTransform);
+	tree.globalTransform = globalTreeTransform; // keep current state	
+
+	linkCurrentBuffertoShader(&tree);
+	glUniform3f(objectColorLoc, tree.color.r, tree.color.g, tree.color.b);
+	tree.Draw();
+
 	// DRAW objects under gravity
 	for (int i = 0; i < 2; i++)     // TODO : need to fix this hardcoding
 	{
-		mat4 globalFootballwTransform = sceneObjects[i] ->createTransform();
+		mat4 globalFootballwTransform = sceneObjects[i]->createTransform();
 		updateUniformVariables(globalFootballwTransform);
-		sceneObjects[i] -> globalTransform = globalFootballwTransform; // keep current state		
-				
-		linkCurrentBuffertoShader(sceneObjects[i]);		
-		glUniform3f(objectColorLoc, sceneObjects[i] ->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b); 
-		sceneObjects[i] -> Draw();
+		sceneObjects[i]->globalTransform = globalFootballwTransform; // keep current state		
+
+		linkCurrentBuffertoShader(sceneObjects[i]);
+		glUniform3f(objectColorLoc, sceneObjects[i]->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b);
+		sceneObjects[i]->Draw();
 
 		updatePhysics(deltaTime, i);
 	}
