@@ -16,8 +16,10 @@ namespace CGCommon
 
 		objl::Mesh Mesh;
 
+		// OpenGL 
 		int startVBO = 0;
 		int startIBO = 0;
+		GLuint VAO;
 
 		// Initial transform
 		glm::vec3 initialTranslateVector = glm::vec3(0, 0, 0);
@@ -35,6 +37,8 @@ namespace CGCommon
 		// Physics
 		glm::vec4 velocity = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);   // not moving
 		float mass = 1.0f;  // 1kg ?
+		float coef = 0.8f;  // coefficient of restitution
+		bool subjectToGravity = true;
 
 		// Current position
 		glm::mat4 globalTransform = glm::mat4(1.0);

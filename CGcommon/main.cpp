@@ -76,6 +76,8 @@ GLuint groundVAO;
 GLuint footballwVAO;
 GLuint footballbVAO;
 GLuint lightVAO;
+int n_vbovertices = 0;
+int n_ibovertices = 0;
 
 // camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -112,20 +114,7 @@ void bindVertexAttribute(int location, int locationSize, int startVBO, int offse
 
 void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 {
-	if (cg_object -> Mesh.MeshName == "footballw")
-	{
-		glBindVertexArray(footballwVAO);
-	}
-
-	if (cg_object ->Mesh.MeshName == "footballb")
-	{
-		glBindVertexArray(footballbVAO);
-	}
-
-	if (cg_object -> Mesh.MeshName == "ground")
-	{
-		glBindVertexArray(groundVAO);
-	}
+	glBindVertexArray(cg_object->VAO);
 
 	bindVertexAttribute(loc1, 3, cg_object -> startVBO, 0);
 	bindVertexAttribute(loc2, 3, cg_object -> startVBO, 3);
@@ -133,31 +122,14 @@ void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 
 	//IBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-
-
 }
 
-void addToObjectBuffer(CGCommon::CGObject cg_object)  //MeshType meshType, int startVBO, int n_vertices, float *vertices)
+void addToObjectBuffer(CGCommon::CGObject *cg_object, GLuint VAO)  //MeshType meshType, int startVBO, int n_vertices, float *vertices)
 {
-	glBufferSubData(GL_ARRAY_BUFFER, cg_object.startVBO * 8 * sizeof(GLfloat), cg_object.Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object.Mesh.Vertices[0].Position.X);
+	glBufferSubData(GL_ARRAY_BUFFER, cg_object->startVBO * 8 * sizeof(GLfloat), cg_object->Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object->Mesh.Vertices[0].Position.X);
+	cg_object->VAO = VAO;
 
-	// Vertex Attribute array	
-	if (cg_object.Mesh.MeshName == "footballw")
-	{
-		glGenVertexArrays(1, &footballwVAO);
-	}
-
-	if (cg_object.Mesh.MeshName == "footballb")
-	{
-		glGenVertexArrays(1, &footballbVAO);
-	}
-
-	if (cg_object.Mesh.MeshName == "ground")
-	{
-		glGenVertexArrays(1, &groundVAO);
-	}
-
-	linkCurrentBuffertoShader(&cg_object);
+	linkCurrentBuffertoShader(cg_object);
 }
 
 void updateUniformVariables(glm::mat4 model)
@@ -362,7 +334,7 @@ objl::Mesh PlaneMesh()
 	return mesh;
 }
 
-std::vector<objl::Mesh> LoadMeshes(const char* objFileLocation)
+std::vector<objl::Mesh> loadMeshes(const char* objFileLocation)
 {
 	objl::Loader obj_loader;
 
@@ -375,53 +347,34 @@ std::vector<objl::Mesh> LoadMeshes(const char* objFileLocation)
 		throw new exception("Could not load mesh");
 }
 
+CGCommon::CGObject loadObjObject (objl::Mesh mesh, vec3 initTransformVector, vec3 initScaleVector, vec3 color)
+{	
+	CGCommon::CGObject object = CGCommon::CGObject();
+	object.Mesh = mesh;
+	object.initialTranslateVector = initTransformVector;
+	object.initialScaleVector = initScaleVector;
+	object.color = color;
+	object.startVBO = n_vbovertices;
+	object.startIBO = n_ibovertices;
+	n_vbovertices += object.Mesh.Vertices.size();
+	n_ibovertices += object.Mesh.Indices.size();
+
+	return object;
+}
+
 void createObjects()
 {
-	int n_vbovertices = 0;
-	int n_ibovertices = 0;
-
-	ground = CGCommon::CGObject();
-	ground.Mesh = groundMesh();
-	ground.initialTranslateVector = vec3(0.0f, -1.0f, 0.0f);
-	ground.initialScaleVector = vec3(0.5f, 0.5f, 0.5f);
-	ground.color = vec3(0.0f, 1.0f, 0.0f);   // Quick solution for color as we are not using texture
-	ground.startVBO = n_vbovertices;
-	ground.startIBO = n_ibovertices;
-	n_vbovertices += ground.Mesh.Vertices.size();
-	n_ibovertices += ground.Mesh.Indices.size();
+	// ADD GROUND
+	ground = loadObjObject(groundMesh(), vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f));
 
 	// load meshes with OBJ Loader	
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 
 	// football
-	vector<objl::Mesh> meshes = LoadMeshes(footballFileName);   // returns 2
-
-	footballw = CGCommon::CGObject();
-	footballb = CGCommon::CGObject();
-
-	// create 2 objects - one for White and one for Black	
-	footballw.Mesh = meshes[0];
-	footballw.Mesh.MeshName = "footballw";
-	footballb.Mesh = meshes[1];
-	footballb.Mesh.MeshName = "footballb";
-
-	footballw.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
-	footballb.initialTranslateVector = vec3(0.0f, 0.5f, 0.0f);
-	footballw.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
-	footballb.initialScaleVector = vec3(0.1f, 0.1f, 0.1f);
-	footballw.color = vec3(1.0f, 1.0f, 1.0f);   // Quick solution for color as we are not using texture
-	footballb.color = vec3(0.0f, 0.0f, 0.0f);
-
-	footballw.startVBO = n_vbovertices;
-	footballw.startIBO = n_ibovertices;
-	n_vbovertices += footballw.Mesh.Vertices.size();
-	n_ibovertices += footballw.Mesh.Indices.size();
-
-	footballb.startVBO = n_vbovertices;
-	footballb.startIBO = n_ibovertices;
-	n_vbovertices += footballb.Mesh.Vertices.size();
-	n_ibovertices += footballb.Mesh.Indices.size();
-
+	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
+	footballw = loadObjObject(meshes[0], vec3(0.0f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f));
+	footballb = loadObjObject(meshes[1], vec3(0.0f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(0.0f, 0.0f, 0.0f));
+	
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
 	loc2 = glGetAttribLocation(programID, "normal");
@@ -434,10 +387,15 @@ void createObjects()
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
+    // Create Vertex Attribute objects
+	glGenVertexArrays(1, &footballwVAO);
+	glGenVertexArrays(1, &footballbVAO);
+	glGenVertexArrays(1, &groundVAO);
+
 	// Start addition objects to containerVAO	
-	addToObjectBuffer(ground);
-	addToObjectBuffer(footballw);
-	addToObjectBuffer(footballb);
+	addToObjectBuffer(&ground, groundVAO);
+	addToObjectBuffer(&footballw, footballwVAO);
+	addToObjectBuffer(&footballb, footballbVAO);
 
 	// Create IBO
 	glGenBuffers(1, &IBO);
@@ -489,7 +447,7 @@ void collision(int n)
 
 void updatePhysics(float deltaTime, int n)
 {
-	for (int j = 0; j < 3; j++)
+	for (int j = 0; j < 3; j++)  // x, y, z directions
 	{
 		sceneObjects[n]->translateVector[j] += deltaTime * sceneObjects[n]->velocity[j];
 		sceneObjects[n]->velocity[j] += deltaTime * forces(n, j) / sceneObjects[n]->mass;
