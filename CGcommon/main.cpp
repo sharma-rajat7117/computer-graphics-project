@@ -132,7 +132,7 @@ void addToObjectBuffer(CGCommon::CGObject *cg_object, GLuint VAO)  //MeshType me
 	glBufferSubData(GL_ARRAY_BUFFER, cg_object->startVBO * 8 * sizeof(GLfloat), cg_object->Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object->Mesh.Vertices[0].Position.X);
 	cg_object->VAO = VAO;
 		
-	linkCurrentBuffertoShader(&cg_object);
+	linkCurrentBuffertoShader(cg_object);
 }
 
 void updateUniformVariables(glm::mat4 model)
@@ -378,7 +378,7 @@ void createObjects()
 
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
-	vector<objl::Mesh> treemeshes = LoadMeshes(treeFileName);
+	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
 	footballw = loadObjObject(treemeshes[0], vec3(-0.75f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(0.139f, 0.69f, 0.19f));
 	
 	//tree.Mesh.MeshName = "tree";
