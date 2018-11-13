@@ -75,7 +75,9 @@ GLuint IBO;
 GLuint groundVAO;
 GLuint footballwVAO;
 GLuint footballbVAO;
-GLuint lightVAO;
+GLuint lightVAO; 
+GLuint treeVAO;
+
 int n_vbovertices = 0;
 int n_ibovertices = 0;
 
@@ -86,7 +88,8 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 // objects
 CGObject ground;
-CGObject footballw, footballb;
+CGObject footballw, footballb,tree;
+
 CGObject *sceneObjects[] = { &footballw, &footballb };  // include objects that are subject to Physics
 
 bool firstMouse = true;
@@ -128,8 +131,8 @@ void addToObjectBuffer(CGCommon::CGObject *cg_object, GLuint VAO)  //MeshType me
 {
 	glBufferSubData(GL_ARRAY_BUFFER, cg_object->startVBO * 8 * sizeof(GLfloat), cg_object->Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object->Mesh.Vertices[0].Position.X);
 	cg_object->VAO = VAO;
-
-	linkCurrentBuffertoShader(cg_object);
+		
+	linkCurrentBuffertoShader(&cg_object);
 }
 
 void updateUniformVariables(glm::mat4 model)
@@ -369,12 +372,20 @@ void createObjects()
 
 	// load meshes with OBJ Loader	
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
-
-	// football
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
 	footballw = loadObjObject(meshes[0], vec3(0.0f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f));
 	footballb = loadObjObject(meshes[1], vec3(0.0f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(0.0f, 0.0f, 0.0f));
+
+	// tree
+	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
+	vector<objl::Mesh> treemeshes = LoadMeshes(treeFileName);
+	footballw = loadObjObject(treemeshes[0], vec3(-0.75f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(0.139f, 0.69f, 0.19f));
 	
+	//tree.Mesh.MeshName = "tree";
+
+	// football
+	
+
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
 	loc2 = glGetAttribLocation(programID, "normal");
@@ -387,15 +398,16 @@ void createObjects()
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
-    // Create Vertex Attribute objects
 	glGenVertexArrays(1, &footballwVAO);
 	glGenVertexArrays(1, &footballbVAO);
 	glGenVertexArrays(1, &groundVAO);
-
+	glGenVertexArrays(1, &treeVAO);
+    
 	// Start addition objects to containerVAO	
 	addToObjectBuffer(&ground, groundVAO);
 	addToObjectBuffer(&footballw, footballwVAO);
 	addToObjectBuffer(&footballb, footballbVAO);
+	addToObjectBuffer(&tree, treeVAO);
 
 	// Create IBO
 	glGenBuffers(1, &IBO);
@@ -404,6 +416,9 @@ void createObjects()
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
+
+
 
 	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
 	glGenVertexArrays(1, &lightVAO);
@@ -506,16 +521,25 @@ void display()
 	glUniform3f(objectColorLoc, ground.color.r, ground.color.g, ground.color.b);
 	ground.Draw();
 
+	// DRAW tree
+	mat4 globalTreeTransform = tree.createTransform();
+	updateUniformVariables(globalTreeTransform);
+	tree.globalTransform = globalTreeTransform; // keep current state	
+
+	linkCurrentBuffertoShader(&tree);
+	glUniform3f(objectColorLoc, tree.color.r, tree.color.g, tree.color.b);
+	tree.Draw();
+
 	// DRAW objects under gravity
 	for (int i = 0; i < 2; i++)     // TODO : need to fix this hardcoding
 	{
-		mat4 globalFootballwTransform = sceneObjects[i] ->createTransform();
+		mat4 globalFootballwTransform = sceneObjects[i]->createTransform();
 		updateUniformVariables(globalFootballwTransform);
-		sceneObjects[i] -> globalTransform = globalFootballwTransform; // keep current state		
-				
-		linkCurrentBuffertoShader(sceneObjects[i]);		
-		glUniform3f(objectColorLoc, sceneObjects[i] ->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b); 
-		sceneObjects[i] -> Draw();
+		sceneObjects[i]->globalTransform = globalFootballwTransform; // keep current state		
+
+		linkCurrentBuffertoShader(sceneObjects[i]);
+		glUniform3f(objectColorLoc, sceneObjects[i]->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b);
+		sceneObjects[i]->Draw();
 
 		updatePhysics(deltaTime, i);
 	}
