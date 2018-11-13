@@ -3,3 +3,19 @@
 ################################################################################
 
 /.vs/CGcommon/v15
+Debug/
+CGcommon/Debug/CGcommon.log
+CGcommon/Debug/CGcommon.tlog/CGcommon.lastbuildstate
+CGcommon/Debug/CGcommon.tlog/CL.command.1.tlog
+CGcommon/Debug/CGcommon.tlog/CL.read.1.tlog
+CGcommon/Debug/CGcommon.tlog/CL.write.1.tlog
+CGcommon/Debug/CGcommon.tlog/link.command.1.tlog
+CGcommon/Debug/CGcommon.tlog/link.read.1.tlog
+CGcommon/Debug/CGcommon.tlog/link.write.1.tlog
+CGcommon/Debug/CGObject.obj
+CGcommon/Debug/main.obj
+CGcommon/Debug/vc141.idb
+CGcommon/Debug/vc141.pdb
+Debug/CGcommon.exe
+Debug/CGcommon.ilk
+Debug/CGcommon.pdb
