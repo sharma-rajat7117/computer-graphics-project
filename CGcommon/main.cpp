@@ -379,13 +379,8 @@ void createObjects()
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
-	footballw = loadObjObject(treemeshes[0], vec3(-0.75f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(0.139f, 0.69f, 0.19f));
+	tree = loadObjObject(treemeshes[0], vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f));
 	
-	//tree.Mesh.MeshName = "tree";
-
-	// football
-	
-
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
 	loc2 = glGetAttribLocation(programID, "normal");
