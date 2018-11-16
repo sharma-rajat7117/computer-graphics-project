@@ -31,6 +31,9 @@ using namespace glm;
 #include "Physics.h"
 #include "..\Dependencies\OBJ_Loader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 using namespace std;
 using namespace CGCommon;
 using namespace Physics;
@@ -58,6 +61,7 @@ const unsigned int SCR_HEIGHT = 1100;
 // Shaders
 GLuint programID;
 GLuint lightingID;
+GLuint waterParticleID;
 
 // Shader attribute locations
 GLuint loc1;
@@ -75,22 +79,18 @@ GLuint IBO;
 GLuint groundVAO;
 GLuint footballwVAO;
 GLuint footballbVAO;
-GLuint lightVAO; 
+GLuint lightVAO;
 GLuint treeVAO;
+GLuint waterParticleVAO;
+
+// ---- water particles vbo --- //
+GLuint billboard_vertex_buffer;
+GLuint particles_position_buffer;
+GLuint particles_color_buffer;
 
 int n_vbovertices = 0;
 int n_ibovertices = 0;
 
-// camera
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-// objects
-CGObject ground;
-CGObject footballw, footballb,tree;
-
-CGObject *sceneObjects[] = { &footballw, &footballb };  // include objects that are subject to Physics
 
 bool firstMouse = true;
 float myyaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
@@ -98,6 +98,27 @@ float mypitch = 0.0f;
 float lastX = 800.0f / 2.0;
 float lastY = 600.0 / 2.0;
 float fov = 45.0f;
+
+
+// camera
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+//fountain position based off camer
+glm::vec3 cameraPosFountain = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFrontFountain = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUpFountain = glm::vec3(0.0f, 1.0f, 0.0f);
+
+//glm::mat4 projectionfountain = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
+//glm::mat4 viewfountain = glm::lookAt(cameraPosFountain, cameraPosFountain + cameraFrontFountain, cameraUpFountain);
+// objects
+CGObject ground;
+CGObject footballw, footballb, tree;
+
+CGObject *sceneObjects[] = { &footballw, &footballb };  // include objects that are subject to Physics
+
+
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -107,6 +128,105 @@ float lastFrame = 0.0f;
 glm::vec3 lightPos(1.0f, 1.0f, 3.0f);
 
 bool rotateCubes = false;
+
+
+
+//--------WATER PARTICLE SYSTEM-------
+// CPU representation of a particle
+
+static GLfloat* g_particule_position_size_data;
+static GLubyte* g_particule_color_data;
+
+GLuint TextureID;
+GLuint CameraRight_worldspace_ID, CameraUp_worldspace_ID, ViewProjMatrixID,
+projection_waterparticle, view_waterparticle, model_waterparticle;
+
+unsigned int texture;
+
+struct Particle {
+	glm::vec3 pos, speed;
+	unsigned char r, g, b, a; // Color
+	float size, angle, weight;
+	float life; // Remaining life of the particle. if <0 : dead and unused.
+	float cameradistance; // *Squared* distance to the camera. if dead : -1.0f
+
+	bool operator<(const Particle& that) const {
+		// Sort in reverse order : far particles drawn first.
+		return this->cameradistance > that.cameradistance;
+	}
+};
+
+const int MaxParticles = 10000;
+Particle ParticlesContainer[MaxParticles];
+int LastUsedParticle = 0;
+
+// Finds a Particle in ParticlesContainer which isn't used yet.
+// (i.e. life < 0);
+int FindUnusedParticle() {
+
+	for (int i = LastUsedParticle; i < MaxParticles; i++) {
+		if (ParticlesContainer[i].life < 0) {
+			LastUsedParticle = i;
+			return i;
+		}
+	}
+
+	for (int i = 0; i < LastUsedParticle; i++) {
+		if (ParticlesContainer[i].life < 0) {
+			LastUsedParticle = i;
+			return i;
+		}
+	}
+
+	return 0; // All particles are taken, override the first one
+}
+
+void SortParticles() {
+	std::sort(&ParticlesContainer[0], &ParticlesContainer[MaxParticles]);
+}
+
+void initialiseParticles() {
+	g_particule_position_size_data = new GLfloat[MaxParticles * 4];
+	g_particule_color_data = new GLubyte[MaxParticles * 4];
+
+	for (int i = 0; i < MaxParticles; i++) {
+		ParticlesContainer[i].life = -1.0f;
+		ParticlesContainer[i].cameradistance = -1.0f;
+	}
+}
+
+void initialiseWaterTexture() {
+	// load and create a texture 
+	// -------------------------
+
+	// texture 1
+	// ---------
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load image, create texture and generate mipmaps
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+	// The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+	unsigned char *data = stbi_load("../CGcommon/Particles/particle.jpg", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
+}
+
+//---------------------------------------------------------------------------------------------------------//
 
 void bindVertexAttribute(int location, int locationSize, int startVBO, int offsetVBO)
 {
@@ -119,9 +239,9 @@ void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 {
 	glBindVertexArray(cg_object->VAO);
 
-	bindVertexAttribute(loc1, 3, cg_object -> startVBO, 0);
-	bindVertexAttribute(loc2, 3, cg_object -> startVBO, 3);
-	bindVertexAttribute(loc3, 3, cg_object -> startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
+	bindVertexAttribute(loc1, 3, cg_object->startVBO, 0);
+	bindVertexAttribute(loc2, 3, cg_object->startVBO, 3);
+	bindVertexAttribute(loc3, 3, cg_object->startVBO, 6);// shench bindVertexAttribute(loc3, 2, cg_object.startVBO, 6);
 
 	//IBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -131,7 +251,7 @@ void addToObjectBuffer(CGCommon::CGObject *cg_object, GLuint VAO)  //MeshType me
 {
 	glBufferSubData(GL_ARRAY_BUFFER, cg_object->startVBO * 8 * sizeof(GLfloat), cg_object->Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object->Mesh.Vertices[0].Position.X);
 	cg_object->VAO = VAO;
-		
+
 	linkCurrentBuffertoShader(cg_object);
 }
 
@@ -247,6 +367,7 @@ void createShaders()
 	// Create and compile our shaders
 	programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
 	lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
+	waterParticleID = LoadShaders("../CGcommon/shaders/Particle.vertexshader", "../CGcommon/shaders/Particle.fragmentshader");
 }
 
 void setupUniformVariables()
@@ -350,8 +471,8 @@ std::vector<objl::Mesh> loadMeshes(const char* objFileLocation)
 		throw new exception("Could not load mesh");
 }
 
-CGCommon::CGObject loadObjObject (objl::Mesh mesh, vec3 initTransformVector, vec3 initScaleVector, vec3 color)
-{	
+CGCommon::CGObject loadObjObject(objl::Mesh mesh, vec3 initTransformVector, vec3 initScaleVector, vec3 color)
+{
 	CGCommon::CGObject object = CGCommon::CGObject();
 	object.Mesh = mesh;
 	object.initialTranslateVector = initTransformVector;
@@ -380,7 +501,9 @@ void createObjects()
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
 	tree = loadObjObject(treemeshes[0], vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f));
-	
+
+
+
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
 	loc2 = glGetAttribLocation(programID, "normal");
@@ -393,11 +516,14 @@ void createObjects()
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
+
+
+
 	glGenVertexArrays(1, &footballwVAO);
 	glGenVertexArrays(1, &footballbVAO);
 	glGenVertexArrays(1, &groundVAO);
 	glGenVertexArrays(1, &treeVAO);
-    
+
 	// Start addition objects to containerVAO	
 	addToObjectBuffer(&ground, groundVAO);
 	addToObjectBuffer(&footballw, footballwVAO);
@@ -412,7 +538,39 @@ void createObjects()
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
 
+	/// ------------ WATER PARTICLES --------
+
+	// The VBO containing the 4 vertices of the particles.
+	// Thanks to instancing, they will be shared by all particles.
+	static const GLfloat g_vertex_buffer_data[] = {
+		 -0.5f, -0.5f, 0.0f,
+		  0.5f, -0.5f, 0.0f,
+		 -0.5f,  0.5f, 0.0f,
+		  0.5f,  0.5f, 0.0f,
+	};
+
+
+	glGenVertexArrays(1, &waterParticleVAO);
+	glBindVertexArray(waterParticleVAO);
+
+	glGenBuffers(1, &billboard_vertex_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
+	// The VBO containing the positions and sizes of the particles
+	glGenBuffers(1, &particles_position_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
+	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
+
+	// The VBO containing the colors of the particles
+
+	glGenBuffers(1, &particles_color_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
+	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLubyte), NULL, GL_STREAM_DRAW);
 
 
 	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
@@ -431,6 +589,19 @@ void init()
 	glEnable(GL_DEPTH_TEST);
 
 	createShaders();
+
+	initialiseWaterTexture();
+	initialiseParticles();
+
+	// Vertex shader
+	CameraRight_worldspace_ID = glGetUniformLocation(waterParticleID, "CameraRight_worldspace");
+	CameraUp_worldspace_ID = glGetUniformLocation(waterParticleID, "CameraUp_worldspace");
+	ViewProjMatrixID = glGetUniformLocation(waterParticleID, "VP");
+	projection_waterparticle = glGetUniformLocation(waterParticleID, "projection");
+	view_waterparticle = glGetUniformLocation(waterParticleID, "view");
+	model_waterparticle = glGetUniformLocation(waterParticleID, "model");
+
+	TextureID = glGetUniformLocation(waterParticleID, "myTextureSampler");
 
 	setupUniformVariables();
 
@@ -490,6 +661,7 @@ void display()
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, &projection[0][0]);
 	// camera/view transformation
 	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, &view[0][0]);
 	//root camera
 	glm::mat4 local1(1.0f);
@@ -538,8 +710,205 @@ void display()
 
 		updatePhysics(deltaTime, i);
 	}
-
 	glPopMatrix();
+	// Use our shader
+	glUseProgram(waterParticleID);
+
+
+
+	// Generate 10 new particule each millisecond,
+// but limit this to 16 ms (60 fps), or if you have 1 long frame (1sec),
+// newparticles will be huge and the next frame even longer.
+	int newparticles = (int)(deltaTime*1000.0);
+	if (newparticles > (int)(0.016f*1000.0))
+		newparticles = (int)(0.016f*1000.0);
+
+	for (int i = 0; i < newparticles; i++) {
+		int particleIndex = FindUnusedParticle();
+		ParticlesContainer[particleIndex].life = 2.5f; // This particle will live 5 seconds.
+		ParticlesContainer[particleIndex].pos = glm::vec3(0, -2.0f, -10.0f);
+
+		float spread = 0.8f;
+		glm::vec3 maindir = glm::vec3(0.0f, 7.0f, 0.0f);
+		// Very bad way to generate a random direction; 
+		// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
+		// combined with some user-controlled parameters (main direction, spread, etc)
+		glm::vec3 randomdir = glm::vec3(
+			(rand() % 2000 - 1000.0f) / 1000.0f,
+			(rand() % 2000 - 1000.0f) / 1000.0f,
+			(rand() % 2000 - 1000.0f) / 1000.0f
+		);
+
+		ParticlesContainer[particleIndex].speed = maindir + randomdir * spread;
+
+
+		// Very bad way to generate a random color
+		ParticlesContainer[particleIndex].r = 135;//rand() % 256;
+		ParticlesContainer[particleIndex].g = 206; //rand() % 256;
+		ParticlesContainer[particleIndex].b = 250;// rand() % 256;
+		ParticlesContainer[particleIndex].a = (rand() % 256) / 3;
+
+		ParticlesContainer[particleIndex].size = (rand() % 1000) / 8000.0f + 0.1f;
+
+	}
+
+
+
+	// Simulate all particles
+	int ParticlesCount = 0;
+	for (int i = 0; i < MaxParticles; i++) {
+
+		Particle& p = ParticlesContainer[i]; // shortcut
+
+		if (p.life > 0.0f) {
+
+			// Decrease life
+			p.life -= deltaTime;
+			if (p.life > 0.0f) {
+
+				// Simulate simple physics : gravity only, no collisions
+				p.speed += glm::vec3(0.0f, -9.81f, 0.0f) * (float)deltaTime * 0.5f;
+				p.pos += p.speed * (float)deltaTime;
+				p.cameradistance = glm::length(p.pos - cameraPos);
+				//ParticlesContainer[i].pos += glm::vec3(0.0f,10.0f, 0.0f) * (float)delta;
+
+				// Fill the GPU buffer
+				g_particule_position_size_data[4 * ParticlesCount + 0] = p.pos.x;
+				g_particule_position_size_data[4 * ParticlesCount + 1] = p.pos.y;
+				g_particule_position_size_data[4 * ParticlesCount + 2] = p.pos.z;
+
+				g_particule_position_size_data[4 * ParticlesCount + 3] = p.size;
+
+				g_particule_color_data[4 * ParticlesCount + 0] = p.r;
+				g_particule_color_data[4 * ParticlesCount + 1] = p.g;
+				g_particule_color_data[4 * ParticlesCount + 2] = p.b;
+				g_particule_color_data[4 * ParticlesCount + 3] = p.a;
+
+			}
+			else {
+				// Particles that just died will be put at the end of the buffer in SortParticles();
+				p.cameradistance = -1.0f;
+			}
+
+			ParticlesCount++;
+
+		}
+	}
+
+	SortParticles();
+
+
+	//printf("%d ", ParticlesCount);
+
+
+	// Update the buffers that OpenGL uses for rendering.
+	// There are much more sophisticated means to stream data from the CPU to the GPU, 
+	// but this is outside the scope of this tutorial.
+	// http://www.opengl.org/wiki/Buffer_Object_Streaming
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLfloat), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ParticlesCount * sizeof(GLfloat) * 4, g_particule_position_size_data);
+
+	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLubyte), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ParticlesCount * sizeof(GLubyte) * 4, g_particule_color_data);
+
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+
+
+	// -------------------------- TEXTURE --------------------------
+
+
+
+	// Bind our texture in Texture Unit 0
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	// Set our "myTextureSampler" sampler to use Texture Unit 0
+	glUniform1i(TextureID, 0);
+	// Same as the billboards tutorial
+
+	glm::mat4 projectionfountain = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
+	glUniformMatrix4fv(projection_waterparticle, 1, GL_FALSE, &projectionfountain[0][0]);
+	
+	// camera/view transformation
+	glUniformMatrix4fv(view_waterparticle, 1, GL_FALSE, &view[0][0]);
+	glm::vec3 fountainPos(1.2f, 1.0f, 2.0f);
+	//root camera
+	glm::mat4 local1fountain(1.0f);
+	local1fountain = glm::translate(local1fountain, fountainPos);
+	glm::mat4 global1fountain = local1fountain;
+	glUniformMatrix4fv(model_waterparticle, 1, GL_FALSE, &global1fountain[0][0]);
+
+
+
+	glUniform3f(CameraRight_worldspace_ID, view[0][0], view[1][0], view[2][0]);
+	glUniform3f(CameraUp_worldspace_ID, view[0][1], view[1][1], view[2][1]);
+	glUniformMatrix4fv(ViewProjMatrixID, 1, GL_FALSE, &projectionfountain[0][0]);
+
+	//printf("view 00 %f ", view[0][0]);
+
+	// 1rst attribute buffer : vertices
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
+	glVertexAttribPointer(
+		0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+	);
+
+	// 2nd attribute buffer : positions of particles' centers
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
+	glVertexAttribPointer(
+		1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+		4,                                // size : x + y + z + size => 4
+		GL_FLOAT,                         // type
+		GL_FALSE,                         // normalized?
+		0,                                // stride
+		(void*)0                          // array buffer offset
+	);
+
+	// 3rd attribute buffer : particles' colors
+	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
+	glVertexAttribPointer(
+		2,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+		4,                                // size : r + g + b + a => 4
+		GL_UNSIGNED_BYTE,                 // type
+		GL_TRUE,                          // normalized?    *** YES, this means that the unsigned char[4] will be accessible with a vec4 (floats) in the shader ***
+		0,                                // stride
+		(void*)0                          // array buffer offset
+	);
+
+	// These functions are specific to glDrawArrays*Instanced*.
+	// The first parameter is the attribute buffer we're talking about.
+	// The second parameter is the "rate at which generic vertex attributes advance when rendering multiple instances"
+	// http://www.opengl.org/sdk/docs/man/xhtml/glVertexAttribDivisor.xml
+	glVertexAttribDivisor(0, 0); // particles vertices : always reuse the same 4 vertices -> 0
+	glVertexAttribDivisor(1, 1); // positions : one per quad (its center)                 -> 1
+	glVertexAttribDivisor(2, 1); // color : one per quad                                  -> 1
+
+	// Draw the particules !
+	// This draws many times a small triangle_strip (which looks like a quad).
+	// This is equivalent to :
+	// for(i in ParticlesCount) : glDrawArrays(GL_TRIANGLE_STRIP, 0, 4), 
+	// but faster.
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, ParticlesCount);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+
+
 
 	// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 	glfwSwapBuffers(window);
@@ -600,6 +969,16 @@ int main(void) {
 	glDeleteVertexArrays(1, &groundVAO);
 	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &IBO);
+
+	delete[] g_particule_position_size_data;
+
+	// Cleanup VBO and shader
+	glDeleteBuffers(1, &particles_color_buffer);
+	glDeleteBuffers(1, &particles_position_buffer);
+	glDeleteBuffers(1, &billboard_vertex_buffer);
+	glDeleteProgram(waterParticleID);
+	glDeleteTextures(1, &texture);
+	glDeleteVertexArrays(1, &waterParticleVAO);
 
 	glfwTerminate();
 	return 0;
