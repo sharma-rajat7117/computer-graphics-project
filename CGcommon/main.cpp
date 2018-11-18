@@ -51,7 +51,6 @@ void processInput(GLFWwindow *window);
 // Macro for indexing vertex buffer
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
-
 GLfloat rotate_angle = 0.0f;
 
 // settings
@@ -99,9 +98,8 @@ float lastX = 800.0f / 2.0;
 float lastY = 600.0 / 2.0;
 float fov = 45.0f;
 
-
 // camera
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 1.0f, 6.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -115,10 +113,9 @@ glm::vec3 cameraUpFountain = glm::vec3(0.0f, 1.0f, 0.0f);
 // objects
 CGObject ground;
 CGObject footballw, footballb, tree;
+CGObject footballw2, footballb2, footballw3, footballb3;
 
-CGObject *sceneObjects[] = { &footballw, &footballb };  // include objects that are subject to Physics
-
-
+CGObject *sceneObjects[] = { &ground, &tree, &footballw, &footballb, &footballw2, &footballb2, &footballw3, &footballb3 };  // include objects that are subject to Physics
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -128,8 +125,6 @@ float lastFrame = 0.0f;
 glm::vec3 lightPos(1.0f, 1.0f, 3.0f);
 
 bool rotateCubes = false;
-
-
 
 //--------WATER PARTICLE SYSTEM-------
 // CPU representation of a particle
@@ -250,7 +245,6 @@ void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 void addToObjectBuffer(CGCommon::CGObject *cg_object, GLuint VAO)  //MeshType meshType, int startVBO, int n_vertices, float *vertices)
 {
 	glBufferSubData(GL_ARRAY_BUFFER, cg_object->startVBO * 8 * sizeof(GLfloat), cg_object->Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object->Mesh.Vertices[0].Position.X);
-	cg_object->VAO = VAO;
 
 	linkCurrentBuffertoShader(cg_object);
 }
@@ -471,38 +465,61 @@ std::vector<objl::Mesh> loadMeshes(const char* objFileLocation)
 		throw new exception("Could not load mesh");
 }
 
-CGCommon::CGObject loadObjObject(objl::Mesh mesh, vec3 initTransformVector, vec3 initScaleVector, vec3 color)
+CGCommon::CGObject loadObjObject(objl::Mesh mesh, bool addToBuffers, GLuint VAO, bool subjectToGravity, vec3 initTransformVector, vec3 initScaleVector, vec3 color, float coef, CGObject* parent)
 {
 	CGCommon::CGObject object = CGCommon::CGObject();
 	object.Mesh = mesh;
+	object.VAO = VAO;
+	object.subjectToGravity = subjectToGravity;
 	object.initialTranslateVector = initTransformVector;
 	object.initialScaleVector = initScaleVector;
 	object.color = color;
+	object.coef = coef;
+	object.Parent = parent;
 	object.startVBO = n_vbovertices;
 	object.startIBO = n_ibovertices;
-	n_vbovertices += object.Mesh.Vertices.size();
-	n_ibovertices += object.Mesh.Indices.size();
+
+	if (addToBuffers)
+	{		
+		n_vbovertices += object.Mesh.Vertices.size();
+		n_ibovertices += object.Mesh.Indices.size();
+	}
 
 	return object;
 }
 
 void createObjects()
 {
+	glGenVertexArrays(1, &footballwVAO);
+	glGenVertexArrays(1, &footballbVAO);
+	glGenVertexArrays(1, &groundVAO);
+	glGenVertexArrays(1, &treeVAO);
+
 	// ADD GROUND
-	ground = loadObjObject(groundMesh(), vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f));
+	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
 
 	// load meshes with OBJ Loader	
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], vec3(0.0f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f));
-	footballb = loadObjObject(meshes[1], vec3(0.0f, 0.5f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(0.0f, 0.0f, 0.0f));
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 0.3f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
+	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-1.0f, 0.2f, 1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 0.0f), 0.65f, NULL);
+	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-1.0f, 0.4f, -1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.6f, NULL);
+	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
+	footballw2.mass = 2.0f;
+	footballw3.mass = 1.5f;
+
+	// This is a hack - Need to update startVBO and startIBO - as these are created to start after the first football
+	sceneObjects[4]->startVBO = footballw3.startVBO = footballw.startVBO;
+	sceneObjects[4]->startIBO = footballw3.startIBO = footballw.startIBO;
+	sceneObjects[5]->startVBO = footballb3.startVBO = footballb.startVBO;
+	sceneObjects[5]->startIBO = footballb3.startIBO = footballb.startIBO;
 
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
-	tree = loadObjObject(treemeshes[0], vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f));
-
-
+	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
 
 	// Shader Attribute locations
 	loc1 = glGetAttribLocation(programID, "position");
@@ -515,14 +532,6 @@ void createObjects()
 
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
-
-
-
-
-	glGenVertexArrays(1, &footballwVAO);
-	glGenVertexArrays(1, &footballbVAO);
-	glGenVertexArrays(1, &groundVAO);
-	glGenVertexArrays(1, &treeVAO);
 
 	// Start addition objects to containerVAO	
 	addToObjectBuffer(&ground, groundVAO);
@@ -551,7 +560,6 @@ void createObjects()
 		  0.5f,  0.5f, 0.0f,
 	};
 
-
 	glGenVertexArrays(1, &waterParticleVAO);
 	glBindVertexArray(waterParticleVAO);
 
@@ -566,12 +574,11 @@ void createObjects()
 	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLfloat), NULL, GL_STREAM_DRAW);
 
 	// The VBO containing the colors of the particles
-
 	glGenBuffers(1, &particles_color_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
+
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
 	glBufferData(GL_ARRAY_BUFFER, MaxParticles * 4 * sizeof(GLubyte), NULL, GL_STREAM_DRAW);
-
 
 	// Then, we set the light's VAO (VBO stays the same. After all, the vertices are the same for the light object (also a 3D cube))	
 	glGenVertexArrays(1, &lightVAO);
@@ -608,35 +615,6 @@ void init()
 	createObjects();
 }
 
-void collision(int n)
-{
-	for (int i = 0; i < 3; i++)
-	{
-		if (sceneObjects[n]->translateVector[i] >= 1.0)
-		{
-			sceneObjects[n]->velocity[i] = -coef * sceneObjects[n]->velocity[i];
-			sceneObjects[n]->translateVector[i] = 1.0 - coef * (sceneObjects[n]->translateVector[i] - 1.0);
-		}
-
-		if (sceneObjects[n]->translateVector[i] <= -1.0)
-		{
-			sceneObjects[n]->velocity[i] = -coef * sceneObjects[n]->velocity[i];
-			sceneObjects[n]->translateVector[i] = -1.0 - coef * (sceneObjects[n]->translateVector[i] + 1.0);
-		}
-	}
-}
-
-void updatePhysics(float deltaTime, int n)
-{
-	for (int j = 0; j < 3; j++)  // x, y, z directions
-	{
-		sceneObjects[n]->translateVector[j] += deltaTime * sceneObjects[n]->velocity[j];
-		sceneObjects[n]->velocity[j] += deltaTime * forces(n, j) / sceneObjects[n]->mass;
-	}
-
-	collision(n);
-}
-
 void display()
 {
 	float currentFrame = glfwGetTime();
@@ -659,10 +637,11 @@ void display()
 	// pass projection matrix to shader (note that in this case it could change every frame)
 	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, &projection[0][0]);
+
 	// camera/view transformation
 	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, &view[0][0]);
+
 	//root camera
 	glm::mat4 local1(1.0f);
 	local1 = glm::translate(local1, cameraPos);
@@ -679,26 +658,8 @@ void display()
 	glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
 	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
 
-	// DRAW GROUND
-	mat4 globalGroundTransform = ground.createTransform();
-	updateUniformVariables(globalGroundTransform);
-	ground.globalTransform = globalGroundTransform; // keep current state	
-
-	linkCurrentBuffertoShader(&ground);
-	glUniform3f(objectColorLoc, ground.color.r, ground.color.g, ground.color.b);
-	ground.Draw();
-
-	// DRAW tree
-	mat4 globalTreeTransform = tree.createTransform();
-	updateUniformVariables(globalTreeTransform);
-	tree.globalTransform = globalTreeTransform; // keep current state	
-
-	linkCurrentBuffertoShader(&tree);
-	glUniform3f(objectColorLoc, tree.color.r, tree.color.g, tree.color.b);
-	tree.Draw();
-
 	// DRAW objects under gravity
-	for (int i = 0; i < 2; i++)     // TODO : need to fix this hardcoding
+	for (int i = 0; i < sizeof(sceneObjects) / sizeof(sceneObjects[0]); i++)     // TODO : need to fix this hardcoding
 	{
 		mat4 globalFootballwTransform = sceneObjects[i]->createTransform();
 		updateUniformVariables(globalFootballwTransform);
@@ -708,7 +669,11 @@ void display()
 		glUniform3f(objectColorLoc, sceneObjects[i]->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b);
 		sceneObjects[i]->Draw();
 
-		updatePhysics(deltaTime, i);
+		// Only objects that have no Parent need Physics - otherwise parent is subject to physics
+		if (sceneObjects[i]->Parent == NULL && sceneObjects[i]->subjectToGravity)
+		{
+			updatePhysics(deltaTime, sceneObjects[i]);
+		}
 	}
 	glPopMatrix();
 	// Use our shader
@@ -835,7 +800,7 @@ void display()
 
 	glm::mat4 projectionfountain = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
 	glUniformMatrix4fv(projection_waterparticle, 1, GL_FALSE, &projectionfountain[0][0]);
-	
+
 	// camera/view transformation
 	glUniformMatrix4fv(view_waterparticle, 1, GL_FALSE, &view[0][0]);
 	glm::vec3 fountainPos(1.2f, 1.0f, 2.0f);
@@ -965,9 +930,14 @@ int main(void) {
 	}
 
 	// optional: de-allocate all resources once they've outlived their purpose:
+	glDeleteVertexArrays(1, &footballbVAO);
 	glDeleteVertexArrays(1, &footballwVAO);
+	glDeleteVertexArrays(1, &treeVAO);
 	glDeleteVertexArrays(1, &groundVAO);
-	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &lightVAO);
+	glDeleteProgram(programID);
+	glDeleteProgram(lightingID);
+	glDeleteBuffers(1, &VBO);	
 	glDeleteBuffers(1, &IBO);
 
 	delete[] g_particule_position_size_data;
