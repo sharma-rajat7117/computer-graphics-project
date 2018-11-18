@@ -422,8 +422,8 @@ objl::Mesh groundMesh()
 objl::Mesh mountainMesh()
 {
 	// start with 5 points 
-	objl::Vertex point1, point2, point3, point4, point5= objl::Vertex();
-		
+	objl::Vertex point1, point2, point3, point4, point5 = objl::Vertex();
+
 	float size = 3.0f;
 
 	// Ignore normals for now
@@ -439,13 +439,66 @@ objl::Mesh mountainMesh()
 	point5.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
 
 	std::vector<objl::Vertex> vertices = std::vector<objl::Vertex>{ point1, point2, point3, point4, point5 };
-	
+
 	// Only drawing the side triangles - not drawing bottom 
 	std::vector<unsigned int> indices = std::vector<unsigned int>{ 0, 1, 4,
 		1, 2, 4,
 		2, 3, 4,
 		3, 0, 4
 	};
+
+	int nIterations = 2; // number of interations 
+	int n = 0;
+
+	while (n < nIterations)
+	{
+		// Re-write indices in each iteration
+		std::vector<unsigned int> tempIndices = std::vector<unsigned int>();
+
+		// For each triangle
+		for (unsigned int i = 0; i < indices.size(); i = i + 3)
+		{
+			// get 3 points 
+			objl::Vector3 position1 = (vertices[indices[i]]).Position;
+			objl::Vector3 position2 = (vertices[indices[i+1]]).Position;
+			objl::Vector3 position3 = (vertices[indices[i+2]]).Position;
+
+			float scale = (position1.X - position2.X) / 2;
+
+			// Divide into 4 triangles
+			objl::Vertex vertex1, vertex2, vertex3 = objl::Vertex();
+			/*vertex1.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, scale * (rand() % 100 / 100.0f) + (position1.Y + position2.Y) / 2, scale * (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
+			vertex2.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, scale * (rand() % 100 / 100.0f) + (position2.Y + position3.Y) / 2, scale * (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
+			vertex3.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, scale * (rand() % 100 / 100.0f) + (position1.Y + position3.Y) / 2, scale * (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);*/
+			vertex1.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, (position1.Y + position2.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
+			vertex2.Position = objl::Vector3((rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, (position2.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
+			vertex3.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, (position1.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);
+			vertex1.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+			vertex2.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+			vertex3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+			
+			unsigned int currentVerticesSize = vertices.size();
+			vertices.push_back(vertex1);
+			vertices.push_back(vertex2);
+			vertices.push_back(vertex3);
+
+			//unsigned int writeIndex = i / 3;
+
+			std::vector<unsigned int> indicesToAdd = std::vector<unsigned int>{ indices[i],  currentVerticesSize,  currentVerticesSize + 2,
+																				currentVerticesSize + 2, currentVerticesSize, currentVerticesSize + 1,
+																				currentVerticesSize, indices[i + 1], currentVerticesSize + 1,
+																				currentVerticesSize + 2, currentVerticesSize + 1, indices[i + 2]};
+
+			tempIndices.insert(std::end(tempIndices), std::begin(indicesToAdd), std::end(indicesToAdd));
+		}
+
+		// Set normals
+
+		// Replace indices
+		indices = tempIndices;
+
+		n++;
+	}	
 
 	objl::Mesh mesh = objl::Mesh(vertices, indices);
 
@@ -503,7 +556,7 @@ CGCommon::CGObject loadObjObject(objl::Mesh mesh, bool addToBuffers, GLuint VAO,
 	object.startIBO = n_ibovertices;
 
 	if (addToBuffers)
-	{		
+	{
 		n_vbovertices += object.Mesh.Vertices.size();
 		n_ibovertices += object.Mesh.Indices.size();
 	}
@@ -527,7 +580,7 @@ void createObjects()
 
 	// ADD GROUND
 	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
-		
+
 	// ADD MOUNTAIN
 	mountain = loadObjObject(mountainMesh(), true, mountainVAO, false, vec3(5.0f, -1.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
 
@@ -553,7 +606,7 @@ void createObjects()
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
 	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
-	
+
 	// Create VBO
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -562,22 +615,22 @@ void createObjects()
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
 	// Start addition objects to containerVAO	
-	addToObjectBuffer(&ground, groundVAO);	
-	addToObjectBuffer(&mountain, mountainVAO); 
+	addToObjectBuffer(&ground, groundVAO);
+	addToObjectBuffer(&mountain, mountainVAO);
 	addToObjectBuffer(&footballw, footballwVAO);
 	addToObjectBuffer(&footballb, footballbVAO);
 	addToObjectBuffer(&tree, treeVAO);
-	
+
 	// Create IBO
 	glGenBuffers(1, &IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ibovertices * sizeof(unsigned int), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);	
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, mountain.startIBO * sizeof(unsigned int), sizeof(unsigned int) * mountain.Mesh.Indices.size(), &mountain.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
-		
+
 
 	/// ------------ WATER PARTICLES --------
 
@@ -967,7 +1020,7 @@ int main(void) {
 	glDeleteVertexArrays(1, &lightVAO);
 	glDeleteProgram(programID);
 	glDeleteProgram(lightingID);
-	glDeleteBuffers(1, &VBO);	
+	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &IBO);
 
 	delete[] g_particule_position_size_data;
