@@ -587,11 +587,11 @@ void createObjects()
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 0.3f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 0.4f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.8f, NULL);
 	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
-	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-1.0f, 0.2f, 1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 0.0f), 0.65f, NULL);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 0.4f, 1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 0.0f), 0.9f, NULL);
 	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
-	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-1.0f, 0.4f, -1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.6f, NULL);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 0.4f, -1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
 	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
 	footballw2.mass = 2.0f;
 	footballw3.mass = 1.5f;
@@ -605,7 +605,7 @@ void createObjects()
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
-	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
+	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -0.6f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
 
 	// Create VBO
 	glGenBuffers(1, &VBO);

@@ -14,7 +14,7 @@ namespace Physics
 		if (!gravity)
 			return (0.0);
 		else if (j == 1)    // y-axis
-			return (-4.9f);
+			return (-2.1f);
 		else
 			return (0.0);
 	}
@@ -23,10 +23,10 @@ namespace Physics
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			if (sceneObject->translateVector[i] >= 10.0)
+			if (sceneObject->translateVector[i] >= 1.0)
 			{
 				sceneObject->velocity[i] = -sceneObject->coef * sceneObject->velocity[i];
-				sceneObject->translateVector[i] = 10.0 - sceneObject->coef * (sceneObject->translateVector[i] - 10.0);
+				sceneObject->translateVector[i] = 1.0 - sceneObject->coef * (sceneObject->translateVector[i] - 1.0);
 			}
 
 			if (sceneObject->translateVector[i] <= -1.0)
