@@ -76,6 +76,7 @@ int proj_mat_location;
 GLuint VBO;
 GLuint IBO;
 GLuint groundVAO;
+GLuint mountainVAO;
 GLuint footballwVAO;
 GLuint footballbVAO;
 GLuint lightVAO;
@@ -111,11 +112,11 @@ glm::vec3 cameraUpFountain = glm::vec3(0.0f, 1.0f, 0.0f);
 //glm::mat4 projectionfountain = glm::perspective(glm::radians(fov), (float)(SCR_WIDTH) / (float)(SCR_HEIGHT), 0.1f, 100.0f);
 //glm::mat4 viewfountain = glm::lookAt(cameraPosFountain, cameraPosFountain + cameraFrontFountain, cameraUpFountain);
 // objects
-CGObject ground;
+CGObject ground, mountain;
 CGObject footballw, footballb, tree;
 CGObject footballw2, footballb2, footballw3, footballb3;
 
-CGObject *sceneObjects[] = { &ground, &tree, &footballw, &footballb, &footballw2, &footballb2, &footballw3, &footballb3 };  // include objects that are subject to Physics
+CGObject *sceneObjects[] = { &ground, &mountain, &tree, &footballw, &footballb, &footballw2, &footballb2, &footballw3, &footballb3 };  // include objects that are subject to Physics
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -414,17 +415,39 @@ objl::Mesh groundMesh()
 	};
 
 	objl::Mesh mesh = objl::Mesh(vertices, indices);
-	mesh.MeshName = "ground";
-	mesh.MeshMaterial.Ns = 94.0;
-	mesh.MeshMaterial.Ni = 1.0;
-	mesh.MeshMaterial.d = 1.0;
-	mesh.MeshMaterial.illum = 2;
-	mesh.MeshMaterial.Kd.X = 0.64;
-	mesh.MeshMaterial.Kd.Y = 0.64;
-	mesh.MeshMaterial.Kd.Z = 0.64;
-	mesh.MeshMaterial.Ks.X = 0.5;
-	mesh.MeshMaterial.Ks.Y = 0.5;
-	mesh.MeshMaterial.Ks.Z = 0.5;
+
+	return mesh;
+}
+
+objl::Mesh mountainMesh()
+{
+	// start with 5 points 
+	objl::Vertex point1, point2, point3, point4, point5= objl::Vertex();
+		
+	float size = 3.0f;
+
+	// Ignore normals for now
+	point1.Position = objl::Vector3(-size, 0.0f, -size);
+	point1.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+	point2.Position = objl::Vector3(size, 0.0f, -size);
+	point2.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+	point3.Position = objl::Vector3(size, 0.0f, size);
+	point3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+	point4.Position = objl::Vector3(-size, 0.0f, size);
+	point4.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+	point5.Position = objl::Vector3(0.0f, 2 * size, 0.0f);
+	point5.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
+
+	std::vector<objl::Vertex> vertices = std::vector<objl::Vertex>{ point1, point2, point3, point4, point5 };
+	
+	// Only drawing the side triangles - not drawing bottom 
+	std::vector<unsigned int> indices = std::vector<unsigned int>{ 0, 1, 4,
+		1, 2, 4,
+		2, 3, 4,
+		3, 0, 4
+	};
+
+	objl::Mesh mesh = objl::Mesh(vertices, indices);
 
 	return mesh;
 }
@@ -490,15 +513,25 @@ CGCommon::CGObject loadObjObject(objl::Mesh mesh, bool addToBuffers, GLuint VAO,
 
 void createObjects()
 {
+	// Shader Attribute locations
+	loc1 = glGetAttribLocation(programID, "position");
+	loc2 = glGetAttribLocation(programID, "normal");
+	loc3 = glGetAttribLocation(programID, "texture");
+
+	// Vertex array objects
 	glGenVertexArrays(1, &footballwVAO);
 	glGenVertexArrays(1, &footballbVAO);
 	glGenVertexArrays(1, &groundVAO);
+	glGenVertexArrays(1, &mountainVAO);
 	glGenVertexArrays(1, &treeVAO);
 
 	// ADD GROUND
 	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
+		
+	// ADD MOUNTAIN
+	mountain = loadObjObject(mountainMesh(), true, mountainVAO, false, vec3(5.0f, -1.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
 
-	// load meshes with OBJ Loader	
+	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
 	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 0.3f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
@@ -511,21 +544,16 @@ void createObjects()
 	footballw3.mass = 1.5f;
 
 	// This is a hack - Need to update startVBO and startIBO - as these are created to start after the first football
-	sceneObjects[4]->startVBO = footballw3.startVBO = footballw.startVBO;
-	sceneObjects[4]->startIBO = footballw3.startIBO = footballw.startIBO;
-	sceneObjects[5]->startVBO = footballb3.startVBO = footballb.startVBO;
-	sceneObjects[5]->startIBO = footballb3.startIBO = footballb.startIBO;
+	footballw2.startVBO = footballw3.startVBO = footballw.startVBO;
+	footballw2.startIBO = footballw3.startIBO = footballw.startIBO;
+	footballb2.startVBO = footballb3.startVBO = footballb.startVBO;
+	footballb2.startIBO = footballb3.startIBO = footballb.startIBO;
 
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
 	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -1.0f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
-
-	// Shader Attribute locations
-	loc1 = glGetAttribLocation(programID, "position");
-	loc2 = glGetAttribLocation(programID, "normal");
-	loc3 = glGetAttribLocation(programID, "texture");
-
+	
 	// Create VBO
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -534,20 +562,22 @@ void createObjects()
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
 	// Start addition objects to containerVAO	
-	addToObjectBuffer(&ground, groundVAO);
+	addToObjectBuffer(&ground, groundVAO);	
+	addToObjectBuffer(&mountain, mountainVAO); 
 	addToObjectBuffer(&footballw, footballwVAO);
 	addToObjectBuffer(&footballb, footballbVAO);
 	addToObjectBuffer(&tree, treeVAO);
-
+	
 	// Create IBO
 	glGenBuffers(1, &IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ibovertices * sizeof(unsigned int), NULL, GL_STATIC_DRAW);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, ground.startIBO * sizeof(unsigned int), sizeof(unsigned int) * ground.Mesh.Indices.size(), &ground.Mesh.Indices[0]);	
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, mountain.startIBO * sizeof(unsigned int), sizeof(unsigned int) * mountain.Mesh.Indices.size(), &mountain.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
-	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
+		
 
 	/// ------------ WATER PARTICLES --------
 
@@ -658,12 +688,12 @@ void display()
 	glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
 	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
 
-	// DRAW objects under gravity
+	// DRAW objects
 	for (int i = 0; i < sizeof(sceneObjects) / sizeof(sceneObjects[0]); i++)     // TODO : need to fix this hardcoding
 	{
-		mat4 globalFootballwTransform = sceneObjects[i]->createTransform();
-		updateUniformVariables(globalFootballwTransform);
-		sceneObjects[i]->globalTransform = globalFootballwTransform; // keep current state		
+		mat4 globalCGObjectTransform = sceneObjects[i]->createTransform();
+		updateUniformVariables(globalCGObjectTransform);
+		sceneObjects[i]->globalTransform = globalCGObjectTransform; // keep current state		
 
 		linkCurrentBuffertoShader(sceneObjects[i]);
 		glUniform3f(objectColorLoc, sceneObjects[i]->color.r, sceneObjects[i]->color.g, sceneObjects[i]->color.b);
