@@ -38,5 +38,7 @@
     <None Include="shaders\lighting.vs" />
     <None Include="shaders\shader.fs" />
     <None Include="shaders\shader.vs" />
+    <None Include="shaders\Particle.fragmentshader" />
+    <None Include="shaders\Particle.vertexshader" />
   </ItemGroup>
 </Project>
