@@ -20,6 +20,7 @@ using namespace glm;
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <stdio.h>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -419,6 +420,22 @@ objl::Mesh groundMesh()
 	return mesh;
 }
 
+bool findVertex(std::vector<objl::Vertex> vertices, objl::Vector3 position, unsigned int& outIndex)
+{
+	float threshold = 0.02; // arbitary threashold 
+
+	for (unsigned int i = 0; i < vertices.size(); i++)
+	{
+		if (abs(vertices[i].Position.X - position.X) < threshold && abs(vertices[i].Position.Y - position.Y) < threshold && abs(vertices[i].Position.Z - position.Z) < threshold)
+		{
+			outIndex = i;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 objl::Mesh mountainMesh()
 {
 	// start with 5 points 
@@ -458,36 +475,64 @@ objl::Mesh mountainMesh()
 		// For each triangle
 		for (unsigned int i = 0; i < indices.size(); i = i + 3)
 		{
+			unsigned int currentVerticesSize = vertices.size();
+
 			// get 3 points 
 			objl::Vector3 position1 = (vertices[indices[i]]).Position;
 			objl::Vector3 position2 = (vertices[indices[i+1]]).Position;
 			objl::Vector3 position3 = (vertices[indices[i+2]]).Position;
 
-			float scale = (position1.X - position2.X) / 2;
+			float scale = (position1.X - position2.X) / 8;
 
 			// Divide into 4 triangles
 			objl::Vertex vertex1, vertex2, vertex3 = objl::Vertex();
 			/*vertex1.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, scale * (rand() % 100 / 100.0f) + (position1.Y + position2.Y) / 2, scale * (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
 			vertex2.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, scale * (rand() % 100 / 100.0f) + (position2.Y + position3.Y) / 2, scale * (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
 			vertex3.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, scale * (rand() % 100 / 100.0f) + (position1.Y + position3.Y) / 2, scale * (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);*/
-			vertex1.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, (position1.Y + position2.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
-			vertex2.Position = objl::Vector3((rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, (position2.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
-			vertex3.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, (position1.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);
-			vertex1.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-			vertex2.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-			vertex3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
 			
-			unsigned int currentVerticesSize = vertices.size();
-			vertices.push_back(vertex1);
-			vertices.push_back(vertex2);
-			vertices.push_back(vertex3);
+			vertex1.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, (position1.Y + position2.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
+			if (vertex1.Position.Y != 0)
+			{
+				vertex1.Position.Y += (rand() % 100 / 100.0f);
+			}
 
-			//unsigned int writeIndex = i / 3;
+			vertex1.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
 
-			std::vector<unsigned int> indicesToAdd = std::vector<unsigned int>{ indices[i],  currentVerticesSize,  currentVerticesSize + 2,
-																				currentVerticesSize + 2, currentVerticesSize, currentVerticesSize + 1,
-																				currentVerticesSize, indices[i + 1], currentVerticesSize + 1,
-																				currentVerticesSize + 2, currentVerticesSize + 1, indices[i + 2]};
+			// Find if this point exists already
+			unsigned int index1;
+			if (!findVertex(vertices, vertex1.Position, index1))
+			{
+				// need to add the vertex as we did not find it
+				vertices.push_back(vertex1);
+				index1 = currentVerticesSize;
+			}
+
+			vertex2.Position = objl::Vector3((rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, (position2.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
+			vertex2.Normal = objl::Vector3(0.0f, 1.0f, 0.0f); 
+			
+			unsigned int index2;
+			if (!findVertex(vertices, vertex2.Position, index2))
+			{
+				// need to add the vertex as we did not find it
+				vertices.push_back(vertex2);
+				index2 = currentVerticesSize + 1;
+			}
+
+			vertex3.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, (position1.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);
+			vertex3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f); 
+			
+			unsigned int index3;
+			if (!findVertex(vertices, vertex3.Position, index3))
+			{
+				// need to add the vertex as we did not find it
+				vertices.push_back(vertex3);
+				index3 = currentVerticesSize + 2;
+			}
+					
+			std::vector<unsigned int> indicesToAdd = std::vector<unsigned int>{ indices[i],  index1,  index3,
+																				index3, index1, index2,
+																				index1, indices[i + 1], index2,
+																				index3, index2, indices[i + 2]};
 
 			tempIndices.insert(std::end(tempIndices), std::begin(indicesToAdd), std::end(indicesToAdd));
 		}
@@ -587,14 +632,15 @@ void createObjects()
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 0.4f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.8f, NULL);
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.8f, NULL);
 	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
-	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 0.4f, 1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 0.0f), 0.9f, NULL);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 0.0f), 0.9f, NULL);
 	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
-	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 0.4f, -1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
 	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
-	footballw2.mass = 2.0f;
-	footballw3.mass = 1.5f;
+	footballw.mass = 0.2f;
+	footballw2.mass = 0.20f;
+	footballw3.mass = 0.15f;
 
 	// This is a hack - Need to update startVBO and startIBO - as these are created to start after the first football
 	footballw2.startVBO = footballw3.startVBO = footballw.startVBO;

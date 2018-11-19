@@ -16,7 +16,7 @@ namespace Physics
 		if (!gravity)
 			return (0.0);
 		else if (j == 1)    // y-axis
-			return (-2.1f);
+			return (-1.0f);
 		else
 			return (0.0);
 	}

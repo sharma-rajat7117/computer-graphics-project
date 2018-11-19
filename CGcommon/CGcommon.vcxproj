@@ -126,6 +126,8 @@
   <ItemGroup>
     <None Include="shaders\lighting.fs" />
     <None Include="shaders\lighting.vs" />
+    <None Include="shaders\Particle.fragmentshader" />
+    <None Include="shaders\Particle.vertexshader" />
     <None Include="shaders\shader.fs" />
     <None Include="shaders\shader.vs" />
   </ItemGroup>
