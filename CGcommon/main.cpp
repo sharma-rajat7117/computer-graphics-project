@@ -82,6 +82,7 @@ GLuint footballwVAO;
 GLuint footballbVAO;
 GLuint lightVAO;
 GLuint treeVAO;
+GLuint flagPostVAO;
 GLuint waterParticleVAO;
 
 // ---- water particles vbo --- //
@@ -114,10 +115,10 @@ glm::vec3 cameraUpFountain = glm::vec3(0.0f, 1.0f, 0.0f);
 //glm::mat4 viewfountain = glm::lookAt(cameraPosFountain, cameraPosFountain + cameraFrontFountain, cameraUpFountain);
 // objects
 CGObject ground, mountain;
-CGObject footballw, footballb, tree;
+CGObject footballw, footballb, tree, flagpost;
 CGObject footballw2, footballb2, footballw3, footballb3;
 
-CGObject *sceneObjects[] = { &ground, &mountain, &tree, &footballw, &footballb, &footballw2, &footballb2, &footballw3, &footballb3 };  // include objects that are subject to Physics
+CGObject *sceneObjects[] = { &ground, &mountain, &tree, &footballw, &footballb, &footballw2, &footballb2, &footballw3, &footballb3, &flagpost };  // include objects that are subject to Physics
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -622,6 +623,7 @@ void createObjects()
 	glGenVertexArrays(1, &groundVAO);
 	glGenVertexArrays(1, &mountainVAO);
 	glGenVertexArrays(1, &treeVAO);
+	glGenVertexArrays(1, &flagPostVAO);
 
 	// ADD GROUND
 	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
@@ -653,11 +655,14 @@ void createObjects()
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
 	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -0.6f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
 
+	// add flagpost
+	const char* flagPostFileName = "../CGCommon/meshes/Cylinder/cylinder.obj";
+	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagPostVAO, false, vec3(5.0f, -1.0f, -5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.3f, 0.7f, 0.19f), 0.0f, NULL);
+
 	// Create VBO
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		
 	glBufferData(GL_ARRAY_BUFFER, n_vbovertices * 8 * sizeof(float), NULL, GL_STATIC_DRAW);  // Vertex contains 8 floats: position (vec3), normal (vec3), texture (vec2)
 
 	// Start addition objects to containerVAO	
@@ -666,6 +671,7 @@ void createObjects()
 	addToObjectBuffer(&footballw, footballwVAO);
 	addToObjectBuffer(&footballb, footballbVAO);
 	addToObjectBuffer(&tree, treeVAO);
+	addToObjectBuffer(&flagpost, flagPostVAO);
 
 	// Create IBO
 	glGenBuffers(1, &IBO);
@@ -676,6 +682,7 @@ void createObjects()
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballw.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballw.Mesh.Indices.size(), &footballw.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, footballb.startIBO * sizeof(unsigned int), sizeof(unsigned int) * footballb.Mesh.Indices.size(), &footballb.Mesh.Indices[0]);
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, tree.startIBO * sizeof(unsigned int), sizeof(unsigned int) * tree.Mesh.Indices.size(), &tree.Mesh.Indices[0]);
+	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, flagpost.startIBO * sizeof(unsigned int), sizeof(unsigned int) * flagpost.Mesh.Indices.size(), &flagpost.Mesh.Indices[0]);
 
 
 	/// ------------ WATER PARTICLES --------
