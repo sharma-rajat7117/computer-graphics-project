@@ -183,7 +183,7 @@ void SortParticles() {
 	std::sort(&ParticlesContainer[0], &ParticlesContainer[MaxParticles]);
 }
 
-void initialiseParticles() {
+void initialiseWaterParticles() {
 	g_particule_position_size_data = new GLfloat[MaxParticles * 4];
 	g_particule_color_data = new GLubyte[MaxParticles * 4];
 
@@ -465,7 +465,7 @@ objl::Mesh mountainMesh()
 		3, 0, 4
 	};
 
-	int nIterations = 2; // number of interations 
+	int nIterations = 1; // number of interations 
 	int n = 0;
 
 	while (n < nIterations)
@@ -634,15 +634,15 @@ void createObjects()
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.8f, NULL);
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), 0.6f, NULL);
 	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
-	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 0.0f), 0.9f, NULL);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.5f, NULL);
 	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
-	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.1f, 0.1f, 0.1f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.4f, NULL);
 	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
-	footballw.mass = 0.2f;
-	footballw2.mass = 0.20f;
-	footballw3.mass = 0.15f;
+	footballw.mass = 1.0f;
+	footballw2.mass = 2.0f;
+	footballw3.mass = 0.5f;
 
 	// This is a hack - Need to update startVBO and startIBO - as these are created to start after the first football
 	footballw2.startVBO = footballw3.startVBO = footballw.startVBO;
@@ -657,7 +657,7 @@ void createObjects()
 
 	// add flagpost
 	const char* flagPostFileName = "../CGCommon/meshes/Cylinder/cylinder.obj";
-	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagPostVAO, false, vec3(5.0f, -1.0f, -5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.3f, 0.7f, 0.19f), 0.0f, NULL);
+	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagPostVAO, false, vec3(5.0f, -1.0f, -5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.3f, 0.7f, 0.4f), 0.0f, NULL);
 
 	// Create VBO
 	glGenBuffers(1, &VBO);
@@ -734,7 +734,7 @@ void init()
 	createShaders();
 
 	initialiseWaterTexture();
-	initialiseParticles();
+	initialiseWaterParticles();
 
 	// Vertex shader
 	CameraRight_worldspace_ID = glGetUniformLocation(waterParticleID, "CameraRight_worldspace");
@@ -755,6 +755,7 @@ void display()
 {
 	float currentFrame = glfwGetTime();
 	deltaTime = currentFrame - lastFrame;
+	//deltaTime /= 10;
 	lastFrame = currentFrame;
 
 	// inpuT
