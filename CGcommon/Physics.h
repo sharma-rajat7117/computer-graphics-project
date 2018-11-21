@@ -9,7 +9,8 @@ namespace Physics
 	// Physics
 	bool gravity = true;	
 	bool staticsflag = false;
-	float threshold = 0.1f;
+	float thresholdGround = 0.1f;
+	float thresholdVelocity = 3.0f;
 	float forces(int j)
 	{
 		if (!gravity)
@@ -24,23 +25,23 @@ namespace Physics
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			if (sceneObject->translateVector[i] >= 10.0)
+			if (sceneObject->position[i] >= 10.0)
 			{
-				sceneObject->velocity[i] = -sceneObject->coef * sceneObject->velocity[i];
-				sceneObject->translateVector[i] = 10.0 - sceneObject->initialTranslateVector[i] - sceneObject->coef * ((sceneObject->translateVector[i] + sceneObject->initialTranslateVector[i]) - 10.0);
+				sceneObject->velocity[i] = -sceneObject->coef * sceneObject->velocity[i];				
+				sceneObject->position[i] = 10.0 - sceneObject->coef * ( sceneObject->position[i] - 10.0);
 			}
 
-			if (sceneObject->translateVector[i] <= -1.5)
+			if (sceneObject->position[i] <= 0)
 			{
-				if (i==1 && fabs(sceneObject->translateVector[i] + sceneObject->initialTranslateVector[i] - 0.5) < threshold && fabs(sceneObject->velocity[i]) < threshold)
+				if (i==1 && fabs(sceneObject->position[i]) < thresholdGround && fabs(sceneObject->velocity[i]) < thresholdVelocity)
 				{					
-					sceneObject->translateVector[i] = -0.5 + sceneObject->initialTranslateVector[i];
+					sceneObject->position[i] = 0;
 					sceneObject->velocity[i] = 0;
 					return;
 				}
 
 				sceneObject->velocity[i] = -sceneObject->coef * sceneObject->velocity[i];
-				sceneObject->translateVector[i] = -0.5 - sceneObject->initialTranslateVector[i] - sceneObject->coef * ((sceneObject->translateVector[i] + sceneObject->initialTranslateVector[i]) + 0.5);
+				sceneObject->position[i] = - sceneObject->coef * sceneObject->position[i];
 			}
 		}
 	}
@@ -54,7 +55,7 @@ namespace Physics
 		{*/
 		for (int j = 0; j < 3; j++)  // x, y, z directions
 		{
-			sceneObject->translateVector[j] += deltaTime * sceneObject->velocity[j];
+			sceneObject->position[j] += deltaTime * sceneObject->velocity[j];
 			sceneObject->velocity[j] += (deltaTime * forces(j)) / sceneObject->mass;
 		}
 		//}

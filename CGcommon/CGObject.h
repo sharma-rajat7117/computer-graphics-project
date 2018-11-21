@@ -27,7 +27,7 @@ namespace CGCommon
 		glm::vec3 initialRotateAngle = glm::vec3(0, 0, 0);
 
 		// Transform vectors
-		glm::vec3 translateVector = glm::vec3(0, 0, 0);
+		glm::vec3 position = glm::vec3(0, 0, 0);
 		glm::vec3 scaleVector = glm::vec3(0.0f, 0.0f, 0.0f);
 		glm::vec3 rotateAngles = glm::vec3(0, 0, 0);
 

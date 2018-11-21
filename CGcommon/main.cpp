@@ -594,6 +594,7 @@ CGCommon::CGObject loadObjObject(objl::Mesh mesh, bool addToBuffers, GLuint VAO,
 	object.VAO = VAO;
 	object.subjectToGravity = subjectToGravity;
 	object.initialTranslateVector = initTransformVector;
+	object.position = initTransformVector;
 	object.initialScaleVector = initScaleVector;
 	object.color = color;
 	object.coef = coef;
@@ -626,10 +627,10 @@ void createObjects()
 	glGenVertexArrays(1, &flagPostVAO);
 
 	// ADD GROUND
-	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -1.0f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
+	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -0.5f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);  //top of ground is now at 0
 
 	// ADD MOUNTAIN
-	mountain = loadObjObject(mountainMesh(), true, mountainVAO, false, vec3(5.0f, -1.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
+	mountain = loadObjObject(mountainMesh(), true, mountainVAO, false, vec3(5.0f, 0.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
 
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
@@ -653,11 +654,11 @@ void createObjects()
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
-	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -0.6f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
+	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -0.1f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
 
 	// add flagpost
 	const char* flagPostFileName = "../CGCommon/meshes/Cylinder/cylinder.obj";
-	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagPostVAO, false, vec3(5.0f, -1.0f, -5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.3f, 0.7f, 0.4f), 0.0f, NULL);
+	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagPostVAO, false, vec3(5.0f, 0.0f, -5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.3f, 0.7f, 0.4f), 0.0f, NULL);
 
 	// Create VBO
 	glGenBuffers(1, &VBO);
@@ -828,7 +829,7 @@ void display()
 	for (int i = 0; i < newparticles; i++) {
 		int particleIndex = FindUnusedParticle();
 		ParticlesContainer[particleIndex].life = 2.5f; // This particle will live 5 seconds.
-		ParticlesContainer[particleIndex].pos = glm::vec3(0, -2.0f, -10.0f);
+		ParticlesContainer[particleIndex].pos = glm::vec3(0, -1.0f, -10.0f);
 
 		float spread = 0.8f;
 		glm::vec3 maindir = glm::vec3(0.0f, 7.0f, 0.0f);
