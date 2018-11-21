@@ -29,6 +29,7 @@ using namespace glm;
 #include <sstream>
 
 #include "CGobject.h"
+#include "Cloth.h"
 #include "Physics.h"
 #include "..\Dependencies\OBJ_Loader.h"
 
@@ -82,7 +83,7 @@ GLuint footballwVAO;
 GLuint footballbVAO;
 GLuint lightVAO;
 GLuint treeVAO;
-GLuint flagPostVAO;
+GLuint flagpostVAO;
 GLuint waterParticleVAO;
 
 // ---- water particles vbo --- //
@@ -103,8 +104,8 @@ float fov = 45.0f;
 
 // camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 1.0f, 6.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -6.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 3.0f, 0.0f);
 
 //fountain position based off camer
 glm::vec3 cameraPosFountain = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -141,21 +142,21 @@ projection_waterparticle, view_waterparticle, model_waterparticle;
 
 unsigned int texture;
 
-struct Particle {
+struct WaterParticle {
 	glm::vec3 pos, speed;
 	unsigned char r, g, b, a; // Color
 	float size, angle, weight;
 	float life; // Remaining life of the particle. if <0 : dead and unused.
 	float cameradistance; // *Squared* distance to the camera. if dead : -1.0f
 
-	bool operator<(const Particle& that) const {
+	bool operator<(const WaterParticle& that) const {
 		// Sort in reverse order : far particles drawn first.
 		return this->cameradistance > that.cameradistance;
 	}
 };
 
 const int MaxParticles = 10000;
-Particle ParticlesContainer[MaxParticles];
+WaterParticle ParticlesContainer[MaxParticles];
 int LastUsedParticle = 0;
 
 // Finds a Particle in ParticlesContainer which isn't used yet.
@@ -624,7 +625,7 @@ void createObjects()
 	glGenVertexArrays(1, &groundVAO);
 	glGenVertexArrays(1, &mountainVAO);
 	glGenVertexArrays(1, &treeVAO);
-	glGenVertexArrays(1, &flagPostVAO);
+	glGenVertexArrays(1, &flagpostVAO);
 
 	// ADD GROUND
 	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -0.5f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);  //top of ground is now at 0
@@ -635,11 +636,11 @@ void createObjects()
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), 0.6f, NULL);
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), 0.76f, NULL);
 	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
-	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.5f, NULL);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.6f, NULL);
 	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
-	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.4f, NULL);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.5f, NULL);
 	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
 	footballw.mass = 1.0f;
 	footballw2.mass = 2.0f;
@@ -658,7 +659,7 @@ void createObjects()
 
 	// add flagpost
 	const char* flagPostFileName = "../CGCommon/meshes/Cylinder/cylinder.obj";
-	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagPostVAO, false, vec3(5.0f, 0.0f, -5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.3f, 0.7f, 0.4f), 0.0f, NULL);
+	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagpostVAO, false, vec3(-5.0f, 0.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.12f, 0.5f, 0.2f), 0.0f, NULL);
 
 	// Create VBO
 	glGenBuffers(1, &VBO);
@@ -672,7 +673,7 @@ void createObjects()
 	addToObjectBuffer(&footballw, footballwVAO);
 	addToObjectBuffer(&footballb, footballbVAO);
 	addToObjectBuffer(&tree, treeVAO);
-	addToObjectBuffer(&flagpost, flagPostVAO);
+	addToObjectBuffer(&flagpost, flagpostVAO);
 
 	// Create IBO
 	glGenBuffers(1, &IBO);
@@ -726,6 +727,10 @@ void createObjects()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0); // Note that we skip over the normal vectors
 	glEnableVertexAttribArray(0);
 	glBindVertexArray(0);
+
+	/// ------------ FLAG PARTICLES --------
+	Cloth flag = Cloth(0.5, 0.5, 100, 100);
+
 }
 
 void init()
@@ -855,13 +860,11 @@ void display()
 
 	}
 
-
-
 	// Simulate all particles
 	int ParticlesCount = 0;
 	for (int i = 0; i < MaxParticles; i++) {
 
-		Particle& p = ParticlesContainer[i]; // shortcut
+		WaterParticle& p = ParticlesContainer[i]; // shortcut
 
 		if (p.life > 0.0f) {
 
@@ -899,8 +902,7 @@ void display()
 	}
 
 	SortParticles();
-
-
+	
 	//printf("%d ", ParticlesCount);
 
 
@@ -1071,6 +1073,7 @@ int main(void) {
 	glDeleteVertexArrays(1, &footballbVAO);
 	glDeleteVertexArrays(1, &footballwVAO);
 	glDeleteVertexArrays(1, &treeVAO);
+	glDeleteVertexArrays(1, &flagpostVAO);
 	glDeleteVertexArrays(1, &groundVAO);
 	glDeleteVertexArrays(1, &lightVAO);
 	glDeleteProgram(programID);
