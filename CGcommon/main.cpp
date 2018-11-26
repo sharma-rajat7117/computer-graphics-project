@@ -24,7 +24,6 @@ using namespace glm;
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <map>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -344,20 +343,20 @@ void addToFlagBuffer()  //MeshType meshType, int startVBO, int n_vertices, float
 	{
 		for (int j = 0; j < numHeight; j++)
 		{
-			flagPositions[j * numWidth + i] = flag.GetParticle(i, j)->getPos();
-			flagNormals[j * numWidth + i] = flag.GetParticle(i, j)->getNormal(); //glm::vec3(0.0f, 0.0f, 1.0f);
+			flagPositions[i * numWidth + j] = flag.GetParticle(i, j)->getPos();
+			flagNormals[i * flag.NumParticlesWidth() + j] = flag.GetParticle(i, j)->getNormal(); //glm::vec3(0.0f, 0.0f, 1.0f);
 
 			if (i < third)
 			{
-				flagColors[j * numWidth + i] = glm::vec3(0.0f, 1.0f, 0.0f);
+				flagColors[i * numWidth + j] = glm::vec3(0.0f, 1.0f, 0.0f);
 			}
 			else if (i < 2 * third)
 			{
-				flagColors[j * numWidth + i] = glm::vec3(1.0f, 1.0f, 1.0f);
+				flagColors[i * numWidth + j] = glm::vec3(1.0f, 1.0f, 1.0f);
 			}
 			else
 			{
-				flagColors[j * numWidth + i] = glm::vec3(1.0f, 1.0f, 0.0f);
+				flagColors[i * numWidth + j] = glm::vec3(1.0f, 1.0f, 0.0f);
 			}
 		}
 	}
@@ -567,15 +566,15 @@ objl::Mesh groundMesh()
 	return mesh;
 }
 
-bool findVertex(std::map<unsigned int, objl::Vector3> middlePoints, objl::Vector3 position, unsigned int& outIndex)
+bool findVertex(std::vector<objl::Vertex> vertices, objl::Vector3 position, unsigned int& outIndex)
 {
-	float threshold = 0.02; // arbitary threashold 							
+	float threshold = 0.02; // arbitary threashold 
 
-	for (auto const& x : middlePoints)
+	for (unsigned int i = 0; i < vertices.size(); i++)
 	{
-		if (abs(x.second.X - position.X) < threshold && abs(x.second.Y - position.Y) < threshold && abs(x.second.Z - position.Z) < threshold)
+		if (abs(vertices[i].Position.X - position.X) < threshold && abs(vertices[i].Position.Y - position.Y) < threshold && abs(vertices[i].Position.Z - position.Z) < threshold)
 		{
-			outIndex = x.first;
+			outIndex = i;
 			return true;
 		}
 	}
@@ -618,7 +617,6 @@ objl::Mesh mountainMesh()
 	{
 		// Re-write indices in each iteration
 		std::vector<unsigned int> tempIndices = std::vector<unsigned int>();
-		std::map<unsigned int, objl::Vector3> middlePoints = std::map<unsigned int, objl::Vector3>();
 
 		// For each triangle
 		for (unsigned int i = 0; i < indices.size(); i = i + 3)
@@ -627,73 +625,60 @@ objl::Mesh mountainMesh()
 
 			// get 3 points 
 			objl::Vector3 position1 = (vertices[indices[i]]).Position;
-			objl::Vector3 position2 = (vertices[indices[i + 1]]).Position;
-			objl::Vector3 position3 = (vertices[indices[i + 2]]).Position;
+			objl::Vector3 position2 = (vertices[indices[i+1]]).Position;
+			objl::Vector3 position3 = (vertices[indices[i+2]]).Position;
 
 			float scale = (position1.X - position2.X) / 8;
 
 			// Divide into 4 triangles
 			objl::Vertex vertex1, vertex2, vertex3 = objl::Vertex();
-		
-			vertex1.Position = objl::Vector3((position1.X + position2.X) / 2, (position1.Y + position2.Y) / 2, (position1.Z + position2.Z) / 2);
+			/*vertex1.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, scale * (rand() % 100 / 100.0f) + (position1.Y + position2.Y) / 2, scale * (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
+			vertex2.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, scale * (rand() % 100 / 100.0f) + (position2.Y + position3.Y) / 2, scale * (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
+			vertex3.Position = objl::Vector3(scale * (rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, scale * (rand() % 100 / 100.0f) + (position1.Y + position3.Y) / 2, scale * (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);*/
+			
+			vertex1.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position2.X) / 2, (position1.Y + position2.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position2.Z) / 2);
+			if (vertex1.Position.Y != 0)
+			{
+				vertex1.Position.Y += (rand() % 100 / 100.0f);
+			}
+
 			vertex1.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
 
 			// Find if this point exists already
 			unsigned int index1;
-			if (!findVertex(middlePoints, vertex1.Position, index1))
+			if (!findVertex(vertices, vertex1.Position, index1))
 			{
-				index1 = currentVerticesSize;
-				// need to add the vertex as we did not find it				
-				middlePoints.insert(std::pair<unsigned int, objl::Vector3>(index1, vertex1.Position));
-				vertex1.Position.X += (rand() % 100 / 100.0f);
-				vertex1.Position.Z += (rand() % 100 / 100.0f);
-				if (vertex1.Position.Y != 0)
-				{
-					vertex1.Position.Y += (rand() % 100 / 100.0f);
-				}
-				vertices.push_back(vertex1);
-			}
-
-			vertex2.Position = objl::Vector3((position2.X + position3.X) / 2, (position2.Y + position3.Y) / 2, (position2.Z + position3.Z) / 2);
-			vertex2.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-
-			unsigned int index2;
-			if (!findVertex(middlePoints, vertex2.Position, index2))
-			{
-				index2 = currentVerticesSize + 1;
 				// need to add the vertex as we did not find it
-				middlePoints.insert(std::pair<unsigned int, objl::Vector3>(index2, vertex2.Position));
-				vertex2.Position.X += (rand() % 100 / 100.0f);
-				vertex2.Position.Z += (rand() % 100 / 100.0f);
-				if (vertex2.Position.Y != 0)
-				{
-					vertex2.Position.Y += (rand() % 100 / 100.0f);
-				}
-				vertices.push_back(vertex2);
+				vertices.push_back(vertex1);
+				index1 = currentVerticesSize;
 			}
 
-			vertex3.Position = objl::Vector3((position1.X + position3.X) / 2, (position1.Y + position3.Y) / 2, (position1.Z + position3.Z) / 2);
-			vertex3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f);
-
-			unsigned int index3;
-			if (!findVertex(middlePoints, vertex3.Position, index3))
+			vertex2.Position = objl::Vector3((rand() % 100 / 100.0f) + (position2.X + position3.X) / 2, (position2.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position2.Z + position3.Z) / 2);
+			vertex2.Normal = objl::Vector3(0.0f, 1.0f, 0.0f); 
+			
+			unsigned int index2;
+			if (!findVertex(vertices, vertex2.Position, index2))
 			{
-				// need to add the vertex as we did not find it			
-				index3 = currentVerticesSize + 2;
-				middlePoints.insert(std::pair<unsigned int, objl::Vector3>(index3, vertex3.Position));
-				vertex3.Position.X += (rand() % 100 / 100.0f);
-				vertex3.Position.Z += (rand() % 100 / 100.0f);
-				if (vertex3.Position.Y != 0)
-				{
-					vertex3.Position.Y += (rand() % 100 / 100.0f);
-				}
-				vertices.push_back(vertex3);
+				// need to add the vertex as we did not find it
+				vertices.push_back(vertex2);
+				index2 = currentVerticesSize + 1;
 			}
 
+			vertex3.Position = objl::Vector3((rand() % 100 / 100.0f) + (position1.X + position3.X) / 2, (position1.Y + position3.Y) / 2, (rand() % 100 / 100.0f) + (position1.Z + position3.Z) / 2);
+			vertex3.Normal = objl::Vector3(0.0f, 1.0f, 0.0f); 
+			
+			unsigned int index3;
+			if (!findVertex(vertices, vertex3.Position, index3))
+			{
+				// need to add the vertex as we did not find it
+				vertices.push_back(vertex3);
+				index3 = currentVerticesSize + 2;
+			}
+					
 			std::vector<unsigned int> indicesToAdd = std::vector<unsigned int>{ indices[i],  index1,  index3,
-				index3, index1, index2,
-				index1, indices[i + 1], index2,
-				index3, index2, indices[i + 2] };
+																				index3, index1, index2,
+																				index1, indices[i + 1], index2,
+																				index3, index2, indices[i + 2]};
 
 			tempIndices.insert(std::end(tempIndices), std::begin(indicesToAdd), std::end(indicesToAdd));
 		}
@@ -704,7 +689,7 @@ objl::Mesh mountainMesh()
 		indices = tempIndices;
 
 		n++;
-	}
+	}	
 
 	objl::Mesh mesh = objl::Mesh(vertices, indices);
 
@@ -904,12 +889,12 @@ void createObjects()
 	{
 		for (int j = 0; j < numHeight - 1; j++)
 		{	
-			flagIndices[j * 6 * (numWidth - 1) + 6 * i] = (unsigned int)(j *  numWidth + i);
-			flagIndices[j * 6 * (numWidth - 1) + 6 * i + 1] = (unsigned int)(j *  numWidth + i + 1);
-			flagIndices[j * 6 * (numWidth - 1) + 6 * i + 2] = (unsigned int)((j + 1) *  numWidth + i);
-			flagIndices[j * 6 * (numWidth - 1) + 6 * i + 3] = (unsigned int)(j *  numWidth + i + 1);
-			flagIndices[j * 6 * (numWidth - 1) + 6 * i + 4] = (unsigned int)((j + 1) *  numWidth  + i + 1);
-			flagIndices[j * 6 * (numWidth - 1) + 6 * i + 5] = (unsigned int)((j + 1) *  numWidth + i);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j] = (unsigned int)(i *  numWidth + j);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 1] = (unsigned int)(i *  numWidth + j + 1);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 2] = (unsigned int)((i + 1) *  numWidth + j);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 3] = (unsigned int)(i *  numWidth + j + 1);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 4] = (unsigned int)((i + 1) *  numWidth  + j + 1);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 5] = (unsigned int)((i + 1) *  numWidth + j);
 		}
 	}
 
