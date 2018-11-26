@@ -145,6 +145,8 @@ glm::vec3 lightPos(1.0f, 1.0f, 3.0f);
 bool rotateCubes = false;
 
 //--------WATER PARTICLE SYSTEM-------
+// NOTE: The particle system was created by following a tutorial from opengl-tutorials
+// It can be found here: http://www.opengl-tutorial.org/intermediate-tutorials/billboards-particles/particles-instancing/
 // CPU representation of a particle
 
 static GLfloat* g_particule_position_size_data;
