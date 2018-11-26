@@ -795,20 +795,20 @@ void createObjects()
 	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -0.5f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);  //top of ground is now at 0
 
 	// ADD MOUNTAIN
-	mountain = loadObjObject(mountainMesh(), true, mountainVAO, false, vec3(5.0f, 0.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
+	mountain = loadObjObject(mountainMesh(), true, mountainVAO, false, vec3(5.0f, -0.25f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);
 
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), 0.8f, NULL);
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.65f, NULL);
 	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
-	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.75f, NULL);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(3.0f, 1.0f, 0.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.6f, NULL);
 	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
-	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.83f, NULL);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-5.0f, 1.0f, 0.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.7f, NULL);
 	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
-	footballw.mass = 0.5f;
+	footballw.mass = 0.7f;
 	footballw2.mass = 0.7f;
-	footballw3.mass = 0.6f;
+	footballw3.mass = 0.7f;
 
 	// This is a hack - Need to update startVBO and startIBO - as these are created to start after the first football
 	footballw2.startVBO = footballw3.startVBO = footballw.startVBO;
@@ -819,11 +819,11 @@ void createObjects()
 	// tree
 	const char* treeFileName = "../CGCommon/meshes/DeadTree/DeadTree.obj";
 	vector<objl::Mesh> treemeshes = loadMeshes(treeFileName);
-	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -0.1f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
+	tree = loadObjObject(treemeshes[0], true, treeVAO, false, vec3(-0.75f, -0.25f, 0.0f), vec3(0.1f, 0.2f, 0.1f), vec3(0.139f, 0.69f, 0.19f), 0.0f, NULL);
 
 	// add flagpost
 	const char* flagPostFileName = "../CGCommon/meshes/Cylinder/cylinder.obj";
-	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagpostVAO, false, vec3(-5.0f, 0.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.6f, 0.5f, 0.2f), 0.0f, NULL);
+	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagpostVAO, false, vec3(-5.0f, -0.25f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.6f, 0.5f, 0.2f), 0.0f, NULL);
 
 	// Create VBO
 	glGenBuffers(1, &VBO);
@@ -1084,7 +1084,7 @@ void display()
 	for (int i = 0; i < newparticles; i++) {
 		int particleIndex = FindUnusedParticle();
 		ParticlesContainer[particleIndex].life = 2.5f; // This particle will live 5 seconds.
-		ParticlesContainer[particleIndex].pos = glm::vec3(0, -1.0f, -10.0f);
+		ParticlesContainer[particleIndex].pos = glm::vec3(0, -1.30f, -8.0f);
 
 		float spread = 0.8f;
 		glm::vec3 maindir = glm::vec3(0.0f, 7.0f, 0.0f);

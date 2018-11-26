@@ -10,7 +10,7 @@ namespace Physics
 	bool gravity = true;	
 	bool staticsflag = false;
 	float thresholdGround = 0.8f;
-	float thresholdVelocity = 6.0f;
+	float thresholdVelocity = 4.0f;
 	float forces(int j)
 	{
 		if (!gravity)
