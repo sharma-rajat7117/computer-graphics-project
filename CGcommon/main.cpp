@@ -1019,7 +1019,7 @@ void display()
 
 	glm::mat4 flagLocation = glm::mat4(1.0f);
 	updateUniformVariables(glm::translate(flagLocation, vec3(-5.0f, 3.5f, 5.0f)), view, projection);	
-	flag.addForce(glm::vec3(0, -9.81, 0) * deltaTime); //* 0.5f * 0.5f); //deltaTime); // add gravity
+	flag.addForce(glm::vec3(0, Physics::forces(1), 0) * deltaTime); //* 0.5f * 0.5f); //deltaTime); // add gravity
 	flag.windForce(glm::vec3(1.0f * rand()/100.0f, 0, 1.0f * rand() / 100.0f) * deltaTime); // generate some wind each frame
 	flag.timeStep(deltaTime);
 
@@ -1106,7 +1106,7 @@ void display()
 			if (p.life > 0.0f) {
 
 				// Simulate simple physics : gravity only, no collisions
-				p.speed += glm::vec3(0.0f, -9.81f, 0.0f) * (float)deltaTime * 0.5f;
+				p.speed += glm::vec3(0.0f, Physics::forces(1), 0.0f) * (float)deltaTime * 0.5f;
 				p.pos += p.speed * (float)deltaTime;
 				p.cameradistance = glm::length(p.pos - cameraPos);
 				//ParticlesContainer[i].pos += glm::vec3(0.0f,10.0f, 0.0f) * (float)delta;
