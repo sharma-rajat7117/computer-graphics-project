@@ -21,6 +21,9 @@
     <ClCompile Include="CGObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Cloth.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Dependencies\OBJ_Loader.h">
@@ -32,6 +35,9 @@
     <ClInclude Include="Physics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Cloth.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\lighting.fs" />
@@ -40,5 +46,7 @@
     <None Include="shaders\shader.vs" />
     <None Include="shaders\Particle.fragmentshader" />
     <None Include="shaders\Particle.vertexshader" />
+    <None Include="shaders\flag.fs" />
+    <None Include="shaders\flag.vs" />
   </ItemGroup>
 </Project>
