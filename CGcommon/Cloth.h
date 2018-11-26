@@ -30,7 +30,7 @@ namespace CGCommon
 
 		void addForce(glm::vec3 f);
 
-		void timeStep();
+		void timeStep(float deltaTime);
 		
 		glm::vec3& getPos();
 
@@ -69,16 +69,31 @@ namespace CGCommon
 
 		glm::vec3 initialPosition = glm::vec3(0, 0, 0);
 		int num_particles_width; // number of particles in "width" direction
-		int num_particles_height; // number of particles in "height" direction
-		std::vector<ClothParticle> particles; // all particles that are part of this cloth
+		int num_particles_height; // number of particles in "height" direction	
 		std::vector<Constraint> constraints; // alle constraints between particles as part of this cloth
-		
-		ClothParticle* getParticle(int x, int y);
+		std::vector<ClothParticle> particles; // all particles that are part of this cloth
+				
 		void makeConstraint(ClothParticle *p1, ClothParticle *p2);
+		void addWindForcesForTriangle(ClothParticle *p1, ClothParticle *p2, ClothParticle *p3, const glm::vec3 direction);
 
 	public:
 		Cloth(float width, float height, int num_particles_width, int num_particles_height);
 		virtual ~Cloth();
+
+		void Draw();		
+
+		int NumParticlesWidth(); 
+		int NumParticlesHeight();
+
+		ClothParticle* GetParticle(int x, int y);
+
+		void addForce(const glm::vec3 direction);
+		void windForce(const glm::vec3 direction);
+
+		static glm::vec3 calcTriangleNormal(ClothParticle *p1, ClothParticle *p2, ClothParticle *p3);
+				
+		void timeStep(float deltaTime);
+		
 	};
 
 }

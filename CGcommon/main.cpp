@@ -65,20 +65,30 @@ const unsigned int SCR_HEIGHT = 1100;
 GLuint programID;
 GLuint lightingID;
 GLuint waterParticleID;
+//GLuint flagID;
 
 // Shader attribute locations
 GLuint loc1;
 GLuint loc2;
 GLuint loc3;
+//GLuint loc4;
+//GLuint loc5;
+//GLuint loc6;
 
 // Uniform locations
 int model_mat_location;
 int view_mat_location;
 int proj_mat_location;
 
+//int model_mat_location_flag;
+//int view_mat_location_flag;
+//int proj_mat_location_flag;
+
 // Buffers
 GLuint VBO;
+GLuint flagVBO;
 GLuint IBO;
+GLuint flagIBO;
 GLuint groundVAO;
 GLuint mountainVAO;
 GLuint footballwVAO;
@@ -87,11 +97,13 @@ GLuint lightVAO;
 GLuint treeVAO;
 GLuint flagpostVAO;
 GLuint waterParticleVAO;
+GLuint flagVAO;
 
 // ---- water particles vbo --- //
 GLuint billboard_vertex_buffer;
 GLuint particles_position_buffer;
 GLuint particles_color_buffer;
+
 
 int n_vbovertices = 0;
 int n_ibovertices = 0;
@@ -120,10 +132,10 @@ glm::vec3 cameraUpFountain = glm::vec3(0.0f, 1.0f, 0.0f);
 CGObject ground, mountain;
 CGObject footballw, footballb, tree, flagpost;
 CGObject footballw2, footballb2, footballw3, footballb3;
+Cloth flag = Cloth(2.5, 1.5, 10, 10);
 
 CGObject *sceneObjects[] = { &ground, &mountain, &tree, &footballw, &footballb, &footballw2, &footballb2, &footballw3, &footballb3, &flagpost };  // include objects that are subject to Physics
-
-// timing
+																																				  // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
@@ -292,6 +304,78 @@ void linkCurrentBuffertoShader(CGCommon::CGObject *cg_object)
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 }
 
+void linkFlagBuffertoShader()
+{
+	glBindVertexArray(flagVAO);
+	
+	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, flagVBO); 
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+
+	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, flagVBO); 
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)(flag.NumParticlesWidth() * flag.NumParticlesHeight() * 3 * sizeof(float)));
+
+	glEnableVertexAttribArray(loc3);
+	glBindBuffer(GL_ARRAY_BUFFER, flagVBO); 
+	glVertexAttribPointer(loc3, 3, GL_FLOAT, GL_TRUE, 3 * sizeof(float), (void*)(flag.NumParticlesWidth() * flag.NumParticlesHeight() * 6 * sizeof(float)));
+
+	//IBO
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, flagIBO);
+}
+
+void addToFlagBuffer()  //MeshType meshType, int startVBO, int n_vertices, float *vertices)
+{
+	int numFlagParticles = flag.NumParticlesWidth() * flag.NumParticlesHeight();
+	int numWidth = flag.NumParticlesWidth();
+	int numHeight = flag.NumParticlesHeight();
+
+	// flag
+	glm::vec3* flagPositions = new glm::vec3[flag.NumParticlesHeight() * flag.NumParticlesWidth()];
+	glm::vec3* flagNormals = new  glm::vec3[flag.NumParticlesHeight() * flag.NumParticlesWidth()];
+	glm::vec3* flagColors = new glm::vec3[flag.NumParticlesHeight() * flag.NumParticlesWidth()];
+
+	int third = numWidth / 3;
+
+	for (int i = 0; i < numWidth; i++)
+	{
+		for (int j = 0; j < numHeight; j++)
+		{
+			flagPositions[i * numWidth + j] = flag.GetParticle(i, j)->getPos();
+			flagNormals[i * flag.NumParticlesWidth() + j] = flag.GetParticle(i, j)->getNormal(); //glm::vec3(0.0f, 0.0f, 1.0f);
+
+			if (i < third)
+			{
+				flagColors[i * numWidth + j] = glm::vec3(0.0f, 1.0f, 0.0f);
+			}
+			else if (i < 2 * third)
+			{
+				flagColors[i * numWidth + j] = glm::vec3(1.0f, 1.0f, 1.0f);
+			}
+			else
+			{
+				flagColors[i * numWidth + j] = glm::vec3(1.0f, 1.0f, 0.0f);
+			}
+		}
+	}
+	
+	glGenBuffers(1, &flagVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, flagVBO);
+	glBufferData(GL_ARRAY_BUFFER, numFlagParticles * 9 * sizeof(float), NULL, GL_STATIC_DRAW);
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, numFlagParticles * 3 * sizeof(GLfloat), flagPositions);
+	glBufferSubData(GL_ARRAY_BUFFER, numFlagParticles * 3 * sizeof(GLfloat), numFlagParticles * 3 * sizeof(GLfloat), flagNormals);
+	glBufferSubData(GL_ARRAY_BUFFER, numFlagParticles * 6 * sizeof(GLfloat), numFlagParticles * 3 * sizeof(GLfloat), flagColors);
+
+	delete flagPositions;
+	delete flagNormals;
+	delete flagColors;
+
+	flagPositions = nullptr;
+	flagNormals = nullptr;
+	flagColors = nullptr;
+}
+
 void addToObjectBuffer(CGCommon::CGObject *cg_object, GLuint VAO)  //MeshType meshType, int startVBO, int n_vertices, float *vertices)
 {
 	glBufferSubData(GL_ARRAY_BUFFER, cg_object->startVBO * 8 * sizeof(GLfloat), cg_object->Mesh.Vertices.size() * 8 * sizeof(GLfloat), &cg_object->Mesh.Vertices[0].Position.X);
@@ -314,6 +398,13 @@ void updateUniformVariables(glm::mat4 model, glm::mat4 view, glm::mat4 persp_pro
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, &view[0][0]);
 	updateUniformVariables(model);
 }
+//
+//void updateUniformVariablesFlag(glm::mat4 model, glm::mat4 view, glm::mat4 persp_proj)
+//{
+//	glUniformMatrix4fv(proj_mat_location_flag, 1, GL_FALSE, &persp_proj[0][0]);
+//	glUniformMatrix4fv(view_mat_location_flag, 1, GL_FALSE, &view[0][0]);
+//	glUniformMatrix4fv(model_mat_location_flag, 1, GL_FALSE, &model[0][0]);
+//}
 
 GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_path) {
 
@@ -412,6 +503,7 @@ void createShaders()
 	programID = LoadShaders("../CGcommon/shaders/shader.vs", "../CGcommon/shaders/shader.fs");
 	lightingID = LoadShaders("../CGcommon/shaders/lighting.vs", "../CGcommon/shaders/lighting.fs");
 	waterParticleID = LoadShaders("../CGcommon/shaders/Particle.vertexshader", "../CGcommon/shaders/Particle.fragmentshader");
+//	flagID = LoadShaders("../CGcommon/shaders/flag.vs", "../CGcommon/shaders/flag.fs");
 }
 
 void setupUniformVariables()
@@ -420,6 +512,10 @@ void setupUniformVariables()
 	model_mat_location = glGetUniformLocation(programID, "model");
 	view_mat_location = glGetUniformLocation(programID, "view");
 	proj_mat_location = glGetUniformLocation(programID, "projection");
+
+	/*model_mat_location_flag = glGetUniformLocation(flagID, "modelFlag");
+	view_mat_location_flag = glGetUniformLocation(flagID, "viewFlag");
+	proj_mat_location_flag = glGetUniformLocation(flagID, "projectionFlag");*/
 }
 
 objl::Mesh groundMesh()
@@ -665,6 +761,10 @@ void createObjects()
 	loc2 = glGetAttribLocation(programID, "normal");
 	loc3 = glGetAttribLocation(programID, "texture");
 
+	//loc4 = glGetAttribLocation(flagID, "flagPosition");
+	//loc5 = glGetAttribLocation(flagID, "flagNormal");
+	//loc6 = glGetAttribLocation(flagID, "flagColor");
+	
 	// Vertex array objects
 	glGenVertexArrays(1, &footballwVAO);
 	glGenVertexArrays(1, &footballbVAO);
@@ -672,6 +772,7 @@ void createObjects()
 	glGenVertexArrays(1, &mountainVAO);
 	glGenVertexArrays(1, &treeVAO);
 	glGenVertexArrays(1, &flagpostVAO);
+	glGenVertexArrays(1, &flagVAO);
 
 	// ADD GROUND
 	ground = loadObjObject(groundMesh(), true, groundVAO, false, vec3(0.0f, -0.5f, 0.0f), vec3(0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), 0.0f, NULL);  //top of ground is now at 0
@@ -682,15 +783,15 @@ void createObjects()
 	// Add footballs
 	const char* footballFileName = "../CGCommon/meshes/Football/football3.obj";
 	vector<objl::Mesh> meshes = loadMeshes(footballFileName);   // returns 2
-	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), 0.76f, NULL);
+	footballw = loadObjObject(meshes[0], true, footballwVAO, true, vec3(0.0f, 1.0f, 0.0f), vec3(0.3f, 0.3f, 0.3f), vec3(1.0f, 1.0f, 1.0f), 0.8f, NULL);
 	footballb = loadObjObject(meshes[1], true, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw);
-	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.6f, NULL);
+	footballw2 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, 1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 0.0f), 0.75f, NULL);
 	footballb2 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f), 0.0f, &footballw2);
-	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.5f, NULL);
+	footballw3 = loadObjObject(meshes[0], false, footballwVAO, true, vec3(-2.0f, 1.0f, -1.0f), vec3(0.2f, 0.2f, 0.2f), vec3(1.0f, 1.0f, 1.0f), 0.83f, NULL);
 	footballb3 = loadObjObject(meshes[1], false, footballbVAO, true, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), 0.0f, &footballw3);
-	footballw.mass = 1.0f;
-	footballw2.mass = 2.0f;
-	footballw3.mass = 0.5f;
+	footballw.mass = 0.5f;
+	footballw2.mass = 0.7f;
+	footballw3.mass = 0.6f;
 
 	// This is a hack - Need to update startVBO and startIBO - as these are created to start after the first football
 	footballw2.startVBO = footballw3.startVBO = footballw.startVBO;
@@ -705,7 +806,7 @@ void createObjects()
 
 	// add flagpost
 	const char* flagPostFileName = "../CGCommon/meshes/Cylinder/cylinder.obj";
-	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagpostVAO, false, vec3(-5.0f, 0.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.12f, 0.5f, 0.2f), 0.0f, NULL);
+	flagpost = loadObjObject(loadMeshes(flagPostFileName)[0], true, flagpostVAO, false, vec3(-5.0f, 0.0f, 5.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.6f, 0.5f, 0.2f), 0.0f, NULL);
 
 	// Create VBO
 	glGenBuffers(1, &VBO);
@@ -773,10 +874,42 @@ void createObjects()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid *)0); // Note that we skip over the normal vectors
 	glEnableVertexAttribArray(0);
 	glBindVertexArray(0);
+		
+	/// ------------ FLAG PARTICLES --------	
+	int numFlagParticles = flag.NumParticlesWidth() * flag.NumParticlesHeight();
+	int numWidth = flag.NumParticlesWidth();
+	int numHeight = flag.NumParticlesHeight();
 
-	/// ------------ FLAG PARTICLES --------
-	Cloth flag = Cloth(0.5, 0.5, 100, 100);
+	// indices
+	unsigned int* flagIndices = new unsigned int[(numHeight - 1) * (numWidth - 1) * 6];
 
+	for (int i = 0; i < numWidth - 1; i++)
+	{
+		for (int j = 0; j < numHeight - 1; j++)
+		{	
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j] = (unsigned int)(i *  numWidth + j);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 1] = (unsigned int)(i *  numWidth + j + 1);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 2] = (unsigned int)((i + 1) *  numWidth + j);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 3] = (unsigned int)(i *  numWidth + j + 1);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 4] = (unsigned int)((i + 1) *  numWidth  + j + 1);
+			flagIndices[i * 6 * (numWidth - 1) + 6 * j + 5] = (unsigned int)((i + 1) *  numWidth + j);
+		}
+	}
+
+	glBindVertexArray(flagVAO);
+	addToFlagBuffer();
+
+	// FLAG IBO
+	glGenBuffers(1, &flagIBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, flagIBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (numHeight - 1) * (numWidth - 1) * 2 * 3 * sizeof(unsigned int), flagIndices, GL_STATIC_DRAW);
+	
+	linkFlagBuffertoShader();
+
+	//glEnableVertexAttribArray(0);
+	//glBindVertexArray(0);
+	
+	delete flagIndices;
 }
 
 void init()
@@ -844,10 +977,20 @@ void display()
 	GLint lightColorLoc = glGetUniformLocation(programID, "lightColor");
 	GLint lightPosLoc = glGetUniformLocation(programID, "lightPos");
 	GLint viewPosLoc = glGetUniformLocation(programID, "viewPos");
+	
+	/*GLint objectColorLocFlag = glGetUniformLocation(programID, "objectColorFlag");
+	GLint lightColorLocFlag = glGetUniformLocation(flagID, "lightColorFlag");
+	GLint lightPosLocFlag = glGetUniformLocation(flagID, "lightPosFlag");
+	GLint viewPosLocFlag = glGetUniformLocation(flagID, "viewPosFlag");*/
+
 	glUniform3f(objectColorLoc, 1.0f, 0.5f, 0.31f);
 	glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f);
 	glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
 	glUniform3f(viewPosLoc, cameraPos.x, cameraPos.y, cameraPos.z);
+
+	//glUniform3f(lightColorLocFlag, 1.0f, 1.0f, 1.0f);
+	//glUniform3f(lightPosLocFlag, lightPos.x, lightPos.y, lightPos.z);
+	//glUniform3f(viewPosLocFlag, cameraPos.x, cameraPos.y, cameraPos.z);
 
 	// DRAW objects
 	for (int i = 0; i < sizeof(sceneObjects) / sizeof(sceneObjects[0]); i++)     // TODO : need to fix this hardcoding
@@ -867,14 +1010,56 @@ void display()
 		}
 	}
 	glPopMatrix();
-	// Use our shader
+
+
+	////----------------------DRAW FLAG ------------------------------------------------
+
+//	glUseProgram(flagID);
+	glPushMatrix();
+
+	glm::mat4 flagLocation = glm::mat4(1.0f);
+	updateUniformVariables(glm::translate(flagLocation, vec3(-5.0f, 3.5f, 5.0f)), view, projection);	
+	flag.addForce(glm::vec3(0, -9.81, 0) * deltaTime); //* 0.5f * 0.5f); //deltaTime); // add gravity
+	flag.windForce(glm::vec3(1.0f * rand()/100.0f, 0, 1.0f * rand() / 100.0f) * deltaTime); // generate some wind each frame
+	flag.timeStep(deltaTime);
+
+	//create smooth per particle normals by adding up all the (hard) triangle normals that each particle is part of
+	for (int x = 0; x<flag.NumParticlesWidth() - 1; x++)
+	{
+		for (int y = 0; y<flag.NumParticlesHeight() - 1; y++)
+		{
+			glm::vec3 normal = Cloth::calcTriangleNormal(flag.GetParticle(x + 1, y), flag.GetParticle(x, y), flag.GetParticle(x, y + 1));
+			flag.GetParticle(x + 1, y)->addToNormal(normal);
+			flag.GetParticle(x, y)->addToNormal(normal);
+			flag.GetParticle(x, y + 1)->addToNormal(normal);
+
+			normal = Cloth::calcTriangleNormal(flag.GetParticle(x + 1, y + 1), flag.GetParticle(x + 1, y), flag.GetParticle(x, y + 1));
+			flag.GetParticle(x + 1, y + 1)->addToNormal(normal);
+			flag.GetParticle(x + 1, y)->addToNormal(normal);
+			flag.GetParticle(x, y + 1)->addToNormal(normal);
+		}
+	}
+
+	addToFlagBuffer();
+
+	linkFlagBuffertoShader();
+
+	glUniform3f(objectColorLoc, 0.0f, 0.0f, 1.0f);  // hardcode for now
+	glDrawElements(GL_TRIANGLES, (flag.NumParticlesHeight() - 1) * (flag.NumParticlesWidth() - 1) * 3 * 2, GL_UNSIGNED_INT, 0);    //flag.Draw();
+
+	glPopMatrix();
+
+	//ASSERT(glGetError() == GL_NO_ERROR);
+
+	////--------------------DRAW WATER ----------------------------------------------------
+
+	// Use water shader
 	glUseProgram(waterParticleID);
 
 
-
 	// Generate 10 new particule each millisecond,
-// but limit this to 16 ms (60 fps), or if you have 1 long frame (1sec),
-// newparticles will be huge and the next frame even longer.
+    // but limit this to 16 ms (60 fps), or if you have 1 long frame (1sec),
+    // newparticles will be huge and the next frame even longer.
 	int newparticles = (int)(deltaTime*1000.0);
 	if (newparticles > (int)(0.016f*1000.0))
 		newparticles = (int)(0.016f*1000.0);
@@ -1352,9 +1537,12 @@ int main(void) {
 	glDeleteVertexArrays(1, &groundVAO);
 	glDeleteVertexArrays(1, &lightVAO);
 	glDeleteProgram(programID);
+	//glDeleteProgram(flagID);
 	glDeleteProgram(lightingID);
 	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &flagVBO);
 	glDeleteBuffers(1, &IBO);
+	glDeleteBuffers(1, &flagIBO);
 
 	delete[] g_particule_position_size_data;
 
