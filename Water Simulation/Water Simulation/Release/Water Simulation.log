@@ -1,0 +1,12 @@
+﻿  Source.cpp
+Source.cpp(92): warning C4244: 'argument': conversion from 'int' to 'GLfloat', possible loss of data
+Source.cpp(93): warning C4244: 'argument': conversion from 'int' to 'GLfloat', possible loss of data
+Source.cpp(94): warning C4244: 'argument': conversion from 'int' to 'GLfloat', possible loss of data
+Source.cpp(114): warning C4244: 'argument': conversion from 'double' to 'GLfloat', possible loss of data
+Source.cpp(114): warning C4244: 'argument': conversion from 'int' to 'GLfloat', possible loss of data
+Source.cpp(129): warning C4244: 'argument': conversion from 'double' to 'GLfloat', possible loss of data
+Source.cpp(129): warning C4244: 'argument': conversion from 'int' to 'GLfloat', possible loss of data
+  Generating code
+  All 263 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  Water Simulation.vcxproj -> F:\Trinity\graphics\Water Simulation\Water Simulation\Release\Water Simulation.exe
